@@ -1,0 +1,7 @@
+<library path="lib/libinteraction_cursor_rviz">
+  <class name="rviz/InteractionCursorDisplay" type="rviz::InteractionCursorDisplay" base_class_type="rviz::Display">
+    <description>
+      A plugin for creating a 3D interaction cursor.
+    </description>
+  </class>
+</library>

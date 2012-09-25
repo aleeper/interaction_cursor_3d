@@ -1,0 +1,21 @@
+<package>
+  <description brief="interaction_cursor_rviz">
+
+     interaction_cursor_rviz
+
+  </description>
+  <author>Adam Leeper</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/interaction_cursor_rviz</url>
+  <depend package="geometry_msgs"/>
+  <depend package="interaction_cursor_msgs"/>
+  <depend package="rviz"/>
+
+  <export>
+    <rviz plugin="${prefix}/lib/plugin_description.xml"/>
+  </export>
+
+</package>
+
+
