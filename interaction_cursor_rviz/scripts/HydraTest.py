@@ -17,9 +17,11 @@ class InteractionTest(object):
 
     self.pub = rospy.Publisher("/rviz/interaction_cursor/update", InteractionCursorUpdate)
     self.sub = rospy.Subscriber("hydra_calib", Hydra, self.hydraCB)
+    
+    self.dragging = False
     #rate_float = 10
     #self.rate = rospy.Rate(rate_float)
-    #rospy.Rate(2).sleep()
+    self.rate = rospy.Rate(10)
     print "Setup and waiting for hydra messages..."
     
 
@@ -34,9 +36,25 @@ class InteractionTest(object):
 
     icu.pose.pose.orientation = paddle.transform.rotation
     icu.pose.header.frame_id = "base_link"
+    
+    #print "NONE = %d, KEEP_ALIVE = %d, GRAB = %d, RELEASE = %d"%(icu.NONE, icu.KEEP_ALIVE, icu.GRAB, icu.RELEASE)
 
-    print "Publishing a message!" #, q.w = %0.2f"%(q.w)
+    button = paddle.buttons[0]
+    print button
+    if (button and not self.dragging):
+      self.dragging = True
+      icu.button_state = icu.GRAB
+    elif (button and self.dragging):
+      icu.button_state = icu.KEEP_ALIVE
+    elif (not button and self.dragging):
+      self.dragging = False
+      icu.button_state = icu.RELEASE
+    elif (not button and not self.dragging):
+      icu.button_state = icu.NONE
+    
+    print "Publishing a message!" # button = %d"%(button)
     self.pub.publish(icu)
+    #self.rate.sleep()
 
 if __name__ == '__main__':
   rospy.init_node("interaction_cursor_test", anonymous = True)

@@ -89,6 +89,10 @@ protected:
 
   void clearOldSelections();
 
+  void grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation);
+  void updateGrabbedObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation);
+  void releaseObject();
+
 protected Q_SLOTS:
   /** @brief Update the length and radius of the axes object from property values. */
   void updateAxes();
@@ -119,7 +123,14 @@ protected:
   ros::Subscriber subscriber_update_;
   ros::Publisher publisher_feedback_;
 
-  std::set<InteractiveObjectWPtr> highlighted_objects;
+  std::set<InteractiveObjectWPtr> highlighted_objects_;
+
+  InteractiveObjectWPtr grabbed_object_;
+  bool dragging_;
+
+  Ogre::Vector3 position_offset_at_grab_;
+  Ogre::Quaternion orientation_offset_at_grab_;
+  std::string marker_frame_at_grab_;
 
 };
 
