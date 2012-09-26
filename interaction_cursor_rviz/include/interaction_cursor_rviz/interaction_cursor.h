@@ -31,21 +31,26 @@
 #define RVIZ_INTERACTION_CURSOR_DISPLAY_H
 
 #include "interaction_cursor_msgs/InteractionCursorUpdate.h"
+
+#include <rviz/bit_allocator.h>
+#include "rviz/default_plugin/interactive_markers/interactive_marker_control.h"
 #include "rviz/display.h"
 
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
-
-#include <rviz/bit_allocator.h>
 
 
 namespace rviz
 {
 
 class Shape;
+class Axes;
+class BoolProperty;
 class FloatProperty;
 class TfFrameProperty;
 class RosTopicProperty;
+class MyVisitor;
+class MySceneQueryListener;
 
 /** @brief Creates a 3D cursor for interaction. */
 class InteractionCursorDisplay: public Display
@@ -67,6 +72,12 @@ public:
   // Overrides from Display
   virtual void update(float dt, float ros_dt);
 
+  rviz::DisplayContext* getDisplayContext() { return context_; }
+
+  friend class MyVisitor;
+  friend class MySceneQueryListener;
+
+
 protected:
   // overrides from Display
   virtual void onEnable();
@@ -76,20 +87,39 @@ protected:
 
   void getIntersections(const Ogre::Sphere &sphere);
 
-private Q_SLOTS:
+  void clearOldSelections();
+
+protected Q_SLOTS:
   /** @brief Update the length and radius of the axes object from property values. */
+  void updateAxes();
+
+  /** @brief Update the scale of the shape object from property values. */
   void updateShape();
 
-private:
-  Shape* axes_;      ///< Handles actually drawing the axes
+  /** @brief Update the topic used to subscribe to updates. */
+  virtual void updateTopic();
 
-  FloatProperty* length_property_;
-  FloatProperty* radius_property_;
-  TfFrameProperty* frame_property_;
+protected:
+
+  ros::NodeHandle nh_;
+
+  Ogre::SceneNode* cursor_node_;
+
+  Shape* cursor_shape_;      ///< Handles actually drawing the axes
+  Axes* cursor_axes_;
+
+  BoolProperty*  show_cursor_axes_property_;
+  BoolProperty*  show_cursor_shape_property_;
+  FloatProperty* axes_length_property_;
+  FloatProperty* axes_radius_property_;
+  FloatProperty* shape_scale_property_;
+  //TfFrameProperty* frame_property_;
   RosTopicProperty* update_topic_property_;
 
   ros::Subscriber subscriber_update_;
   ros::Publisher publisher_feedback_;
+
+  std::set<InteractiveObjectWPtr> highlighted_objects;
 
 };
 

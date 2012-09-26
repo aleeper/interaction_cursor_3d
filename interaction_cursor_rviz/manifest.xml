@@ -11,6 +11,9 @@
   <depend package="geometry_msgs"/>
   <depend package="interaction_cursor_msgs"/>
   <depend package="rviz"/>
+  
+  <!-- Dependencies only for testing, should get rid of these scripts! -->
+  <depend package="razer_hydra"/>
 
   <export>
     <rviz plugin="${prefix}/lib/plugin_description.xml"/>

@@ -47,6 +47,7 @@
 
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
+#include <OGRE/OgreRenderable.h>
 
 #include <boost/bind.hpp>
 
@@ -92,7 +93,7 @@ class MyVisitor : public Ogre::Renderable::Visitor
 {
 public:
   MyVisitor()
-    : sm_(0) {}
+    : disp_(0) {}
 
   /** Virtual destructor needed as class has virtual methods. */
   virtual ~MyVisitor() { }
@@ -107,16 +108,19 @@ public:
   */
   virtual void visit(Ogre::Renderable* rend, ushort lodIndex, bool isDebug, Ogre::Any* pAny = 0)
   {
+    // This only exists in Ogre version
+    //if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+    rviz::SelectionManager* sm = disp_->getDisplayContext()->getSelectionManager();
 
     try
     {
       Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
-      if(sm_)
+      if(sm)
       {
         Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
-        CollObjectHandle handle = sm_->colourToHandle(colour);
+        CollObjectHandle handle = sm->colourToHandle(colour);
 
-        rviz::SelectionHandler* handler = sm_->getHandler(handle);
+        rviz::SelectionHandler* handler = sm->getHandler(handle);
         if(handle)
         {
           InteractiveObjectWPtr ptr = handler->getInteractiveObject();
@@ -127,18 +131,19 @@ public:
           if(control)
           {
             control->setHoverHighlight(true);
+            disp_->highlighted_objects.insert(ptr);
           }
         }
       }
     }
     catch(...)
     {
-      ROS_WARN("Caught an Ogre exception (probably because there was no CustomParamter!)");
+      //ROS_WARN("Caught an Ogre exception (probably because there was no CustomParamter!)");
     }
   }
 
 
-  rviz::SelectionManager* sm_;
+  rviz::InteractionCursorDisplay* disp_;
 };
 
 
@@ -151,6 +156,7 @@ public:
 class MySceneQueryListener : public Ogre::SceneQueryListener
 {
 public:
+  MySceneQueryListener() : disp_(0) { }
     virtual ~MySceneQueryListener() { }
     /** Called when a MovableObject is returned by a query.
     @remarks
@@ -159,9 +165,9 @@ public:
     */
     virtual bool queryResult(Ogre::MovableObject* object)
     {
-      ROS_INFO("Sphere collides with MoveableObject [%s].",  object->getName().c_str());
+      //ROS_INFO("Sphere collides with MoveableObject [%s].",  object->getName().c_str());
       MyVisitor visitor;
-      visitor.sm_ = context_->getSelectionManager();
+      visitor.disp_ = disp_;
       object->visitRenderables( &visitor );
       return true;
     }
@@ -174,10 +180,10 @@ public:
     */
     virtual bool queryResult(Ogre::SceneQuery::WorldFragment* fragment)
     {
-      ROS_INFO("Sphere collides with WorldFragment type [%d].", fragment->fragmentType );
+      //ROS_INFO("Sphere collides with WorldFragment type [%d].", fragment->fragmentType );
       return true;
     }
-    rviz::DisplayContext* context_;
+    rviz::InteractionCursorDisplay* disp_;
 };
 
 // -----------------------------------------------------------------------------
@@ -185,77 +191,155 @@ public:
 
 InteractionCursorDisplay::InteractionCursorDisplay()
   : Display()
-  , axes_( 0 )
+    , nh_("")
+    , cursor_shape_( 0 )
 {
   update_topic_property_ = new RosTopicProperty( "Update Topic", "",
                                                         ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorUpdate>(),
                                                         "interaction_cursor_msgs::InteractionCursorUpdate topic to subscribe to.",
                                                         this, SLOT( updateTopic() ));
 
-  frame_property_ = new TfFrameProperty( "Reference Frame", TfFrameProperty::FIXED_FRAME_STRING,
-                                         "The TF frame these axes will use for their origin.",
-                                         this, NULL, true );
+//  frame_property_ = new TfFrameProperty( "Reference Frame", TfFrameProperty::FIXED_FRAME_STRING,
+//                                         "The TF frame these axes will use for their origin.",
+//                                         this, NULL, true );
 
-//  length_property_ = new FloatProperty( "Length", 1.0,
-//                                        "Length of each axis, in meters.",
-//                                        this, SLOT( updateShape() ));
-//  length_property_->setMin( 0.0001 );
 
-  radius_property_ = new FloatProperty( "Radius", 0.1,
-                                        "Radius of search sphere, in meters.",
+  show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
+                                                 "Enables display of cursor shape.",
+                                                 this);
+
+  shape_scale_property_ = new FloatProperty( "Cursor Size", 0.2,
+                                        "Size of search sphere, in meters.",
                                         this, SLOT( updateShape() ));
-  radius_property_->setMin( 0.0001 );
+  shape_scale_property_->setMin( 0.0001 );
+
+  show_cursor_axes_property_ = new BoolProperty("Show Axes", true,
+                                                "Enables display of cursor axes.",
+                                                this);
+
+  axes_length_property_ = new FloatProperty( "Axes Length", 0.2,
+                                        "Length of each axis, in meters.",
+                                        this, SLOT( updateAxes() ));
+  axes_length_property_->setMin( 0.0001 );
+
+  axes_radius_property_ = new FloatProperty( "Axes Radius", 0.02,
+                                        "Radius of each axis, in meters.",
+                                        this, SLOT( updateAxes() ));
+  axes_radius_property_->setMin( 0.0001 );
 }
 
 InteractionCursorDisplay::~InteractionCursorDisplay()
 {
-  if(axes_)
-    delete axes_;
+  delete cursor_shape_;
+  delete cursor_axes_;
+  context_->getSceneManager()->destroySceneNode( cursor_node_ );
+}
+
+void InteractionCursorDisplay::updateTopic()
+{
+  subscriber_update_ = nh_.subscribe<interaction_cursor_msgs::InteractionCursorUpdate>
+                              (update_topic_property_->getStdString(), 10,
+                              boost::bind(&InteractionCursorDisplay::updateCallback, this, _1));
 }
 
 void InteractionCursorDisplay::onInitialize()
 {
-  frame_property_->setFrameManager( context_->getFrameManager() );
+  //frame_property_->setFrameManager( context_->getFrameManager() );
 
-  //axes_ = new Axes( scene_manager_, 0, length_property_->getFloat(), radius_property_->getFloat() );
-  //axes_->getSceneNode()->setVisible( isEnabled() );
+  cursor_node_ = context_->getSceneManager()->getRootSceneNode()->createChildSceneNode();
+  cursor_node_->setVisible( isEnabled() );
 
-  axes_ = new Shape( Shape::Sphere, context_->getSceneManager(), 0);
-  axes_->setScale(Ogre::Vector3(1.0f, 1.0f, 1.0f));
-  axes_->setColor(0.3f, 1.0f, 0.3f, 0.5f);
-  axes_->getRootNode()->setVisible( isEnabled() );
+  cursor_axes_ = new Axes( scene_manager_, cursor_node_, axes_length_property_->getFloat(), axes_radius_property_->getFloat() );
+  cursor_axes_->getSceneNode()->setVisible( show_cursor_axes_property_->getBool() );
+
+  cursor_shape_ = new Shape( Shape::Sphere, context_->getSceneManager(), cursor_node_);
+  cursor_shape_->setScale(Ogre::Vector3(0.2f));
+  cursor_shape_->setColor(0.3f, 1.0f, 0.3f, 0.5f);
+  cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool() );
+
+  // Should this happen onEnable and then get killed later?
+  updateTopic();
 }
 
 void InteractionCursorDisplay::onEnable()
 {
-  axes_->getRootNode()->setVisible( true );
+  cursor_node_->setVisible( true );
 }
 
 void InteractionCursorDisplay::onDisable()
 {
-  axes_->getRootNode()->setVisible( false );
+  cursor_node_->setVisible( false );
 }
+
+void InteractionCursorDisplay::updateAxes()
+{
+  cursor_axes_->set( axes_length_property_->getFloat(), axes_radius_property_->getFloat() );
+  context_->queueRender();
+}
+
 
 void InteractionCursorDisplay::updateShape()
 {
-  //axes_->set( length_property_->getFloat(), radius_property_->getFloat() );
-  float s = 1.05*radius_property_->getFloat();
-  axes_->setScale(Ogre::Vector3(s,s,s));
+  Ogre::Vector3 shape_scale( 1.05*shape_scale_property_->getFloat());
+  cursor_shape_->setScale( shape_scale );
   context_->queueRender();
 }
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
 {
   ROS_INFO("Got a InteractionCursor update!");
-  Ogre::Vector3 last_position;
-  Ogre::Quaternion last_quaternion;
+  std::string frame = icu_cptr->pose.header.frame_id;
+  Ogre::Vector3 position;
+  Ogre::Quaternion quaternion;
 
-  context_->getFrameManager()->transform(icu_cptr->pose.header.frame_id, ros::Time(0), icu_cptr->pose.pose, last_position, last_quaternion);
+  if( context_->getFrameManager()->transform(frame, ros::Time(0), icu_cptr->pose.pose, position, quaternion) )
+  {
+    cursor_node_->setPosition( position );
+    cursor_node_->setOrientation( quaternion );
 
-  // TODO magic number!
-  Ogre::Sphere sphere(last_position, radius_property_->getFloat());
-  getIntersections(sphere);
+    Ogre::Sphere sphere(position, shape_scale_property_->getFloat());
+    clearOldSelections();
+    getIntersections(sphere);
+    context_->queueRender();
 
+    setStatus( StatusProperty::Ok, "Transform", "Transform OK" );
+  }
+  else
+  {
+    std::string error;
+    if( context_->getFrameManager()->transformHasProblems( frame, ros::Time(), error ))
+    {
+      setStatus( StatusProperty::Error, "Transform", QString::fromStdString( error ));
+    }
+    else
+    {
+      setStatus( StatusProperty::Error,
+                 "Transform",
+                 "Could not transform from [" + QString::fromStdString(frame) + "] to Fixed Frame [" + fixed_frame_ + "] for an unknown reason" );
+    }
+  }
+
+
+
+}
+
+void InteractionCursorDisplay::clearOldSelections()
+{
+  std::set<InteractiveObjectWPtr>::iterator it;
+  for ( it=highlighted_objects.begin() ; it != highlighted_objects.end(); it++ )
+  {
+    InteractiveObjectWPtr ptr = (*it);
+    if(!ptr.expired())
+    {
+      boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+      if(control)
+      {
+        control->setHoverHighlight(false);
+        //disp_->highlighted_objects.insert(ptr);
+      }
+    }
+  }
+  highlighted_objects.clear();
 }
 
 void InteractionCursorDisplay::getIntersections(const Ogre::Sphere &sphere)
@@ -269,27 +353,36 @@ void InteractionCursorDisplay::getIntersections(const Ogre::Sphere &sphere)
   Ogre::DefaultSphereSceneQuery ssq(context_->getSceneManager());
   ssq.setSphere(sphere);
   MySceneQueryListener listener;
-  listener.context_ = context_;
+  listener.disp_ = this;
   ssq.execute(&listener);
 }
 
+//void InteractionCursorDisplay::grabHighlightedObject()
+//{
+//  InteractiveObjectWPtr *(highlighted_objects.begin());
+//}
+
+//void InteractionCursorDisplay::
+
 void InteractionCursorDisplay::update( float dt, float ros_dt )
 {
-  QString qframe = frame_property_->getFrame();
-  std::string frame = qframe.toStdString();
+//  QString qframe = frame_property_->getFrame();
+//  std::string frame = qframe.toStdString();
 
-  Ogre::Vector3 position;
-  Ogre::Quaternion orientation;
+//  Ogre::Vector3 position;
+//  Ogre::Quaternion orientation;
 
-  position.x = 0;
-  position.y = -3*(1 + sin(ros::Time::now().toSec()));
-  position.z = 0;
+//  position.x = 0;
+//  cursor_shape_ion.y = -3*(1 + sin(ros::Time::now().toSec()));
+//  cursor_shape_ion.z = 0;
 
-  axes_->setPosition( position );
-  axes_->setOrientation( orientation );
+//  axes_->setPosition( position );
+//  axes_->setOrientation( orientation );
 
-  Ogre::Sphere sphere(position, radius_property_->getFloat());
-  getIntersections(sphere);
+//  Ogre::Sphere sphere(position, axes_radius_property_->getFloat());
+//  clearOldSelections();
+//  getIntersections(sphere);
+
 
 
 //  if( context_->getFrameManager()->getTransform( frame, ros::Time(), position, orientation ))
