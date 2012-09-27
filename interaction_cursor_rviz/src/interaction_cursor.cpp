@@ -392,8 +392,8 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
     if(control)
     {
       control->setActiveHighlight(true);
-      control->isInteractive();
       InteractiveMarker* im = control->getParent();
+      im->startDragging();
       Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = orientation.Inverse()*(position - im->getPosition());
       position_offset_at_grab_ = r_marker_to_cursor_in_cursor_frame;
       orientation_offset_at_grab_ = orientation.Inverse()*im->getOrientation();
@@ -437,6 +437,7 @@ void InteractionCursorDisplay::releaseObject()
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
     if(control)
     {
+      control->getParent()->stopDragging();
       // Add it back to the set for later un-highlighting.
       highlighted_objects_.insert(grabbed_object_);
     }
