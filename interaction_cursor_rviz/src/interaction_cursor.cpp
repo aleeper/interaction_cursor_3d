@@ -53,6 +53,21 @@
 #include <boost/bind.hpp>
 
 
+#if( OGRE_VERSION_MINOR < 8 )
+// TODO This is a TERRIBLE work around to add this function to Ogre versions before 1.8.
+namespace Ogre {
+class MyRenderable : public Renderable
+{
+public:
+  MyRenderable() : Renderable() {}
+  ~MyRenderable() {}
+  bool hasCustomParameter(size_t index) const
+  {
+    return mCustomParameters.find(index) != mCustomParameters.end();
+  }
+};
+}
+#endif
 
 namespace rviz
 {
@@ -109,43 +124,41 @@ public:
   */
   virtual void visit(Ogre::Renderable* rend, ushort lodIndex, bool isDebug, Ogre::Any* pAny = 0)
   {
-    // This only exists in Ogre version
-    //if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+
+#if( OGRE_VERSION_MINOR < 8 )
+    // This static cast is INCREDIBLY unsafe, but is a temporary work around since Ogre < 1.8 does not have this.
+    Ogre::MyRenderable* myrend = static_cast<Ogre::MyRenderable*>(rend);
+    if( !myrend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+#else
+    if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+#endif
+    Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
+
     rviz::SelectionManager* sm = disp_->getDisplayContext()->getSelectionManager();
-
-    try
+    if(sm)
     {
-      Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
-      if(sm)
+      Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
+      CollObjectHandle handle = colorToHandle(colour);
+
+      rviz::SelectionHandler* handler = sm->getHandler(handle);
+      if(handle)
       {
-        Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
-        CollObjectHandle handle = sm->colourToHandle(colour);
+        InteractiveObjectWPtr ptr = handler->getInteractiveObject();
 
-        rviz::SelectionHandler* handler = sm->getHandler(handle);
-        if(handle)
+        // Don't do anything to a control if we are already grabbing its parent marker.
+        if(ptr.lock() == disp_->grabbed_object_.lock())
+          return;
+
+        //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
+        boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+        if(control && control->getVisible())
         {
-          InteractiveObjectWPtr ptr = handler->getInteractiveObject();
-
-          // Don't do anything to a control if we are already grabbing its parent marker.
-          if(ptr.lock() == disp_->grabbed_object_.lock())
-            return;
-
-          //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
-          boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
-          if(control)
-          {
-            control->setHoverHighlight(true);
-            disp_->highlighted_objects_.insert(ptr);
-          }
+          control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
+          disp_->highlighted_objects_.insert(ptr);
         }
       }
     }
-    catch(...)
-    {
-      //ROS_WARN("Caught an Ogre exception (probably because there was no CustomParamter!)");
-    }
   }
-
 
   rviz::InteractionCursorDisplay* disp_;
 };
@@ -206,16 +219,11 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                                         "interaction_cursor_msgs::InteractionCursorUpdate topic to subscribe to.",
                                                         this, SLOT( updateTopic() ));
 
-//  frame_property_ = new TfFrameProperty( "Reference Frame", TfFrameProperty::FIXED_FRAME_STRING,
-//                                         "The TF frame these axes will use for their origin.",
-//                                         this, NULL, true );
-
-
   show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
                                                  "Enables display of cursor shape.",
                                                  this);
 
-  shape_scale_property_ = new FloatProperty( "Cursor Size", 0.2,
+  shape_scale_property_ = new FloatProperty( "Cursor Radius", 0.05,
                                         "Size of search sphere, in meters.",
                                         this, SLOT( updateShape() ));
   shape_scale_property_->setMin( 0.0001 );
@@ -224,12 +232,12 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                                 "Enables display of cursor axes.",
                                                 this);
 
-  axes_length_property_ = new FloatProperty( "Axes Length", 0.2,
+  axes_length_property_ = new FloatProperty( "Axes Length", 0.1,
                                         "Length of each axis, in meters.",
                                         this, SLOT( updateAxes() ));
   axes_length_property_->setMin( 0.0001 );
 
-  axes_radius_property_ = new FloatProperty( "Axes Radius", 0.02,
+  axes_radius_property_ = new FloatProperty( "Axes Radius", 0.01,
                                         "Radius of each axis, in meters.",
                                         this, SLOT( updateAxes() ));
   axes_radius_property_->setMin( 0.0001 );
@@ -287,7 +295,7 @@ void InteractionCursorDisplay::updateAxes()
 
 void InteractionCursorDisplay::updateShape()
 {
-  Ogre::Vector3 shape_scale( 1.05*shape_scale_property_->getFloat());
+  Ogre::Vector3 shape_scale( 1.05/2.0*shape_scale_property_->getFloat());
   cursor_shape_->setScale( shape_scale );
   context_->queueRender();
 }
@@ -310,17 +318,17 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
 
     if(icu_cptr->button_state == icu_cptr->GRAB)
     {
-      ROS_INFO("Grabbing object!");
+      //ROS_INFO("Grabbing object!");
       grabObject(position, quaternion);
     }
     else if(icu_cptr->button_state == icu_cptr->KEEP_ALIVE && dragging_)
     {
-      ROS_INFO("Updating object pose!");
+      //ROS_INFO("Updating object pose!");
       updateGrabbedObject(position, quaternion);
     }
     else if(icu_cptr->button_state == icu_cptr->RELEASE && dragging_)
     {
-      ROS_INFO("Releasing object!");
+      //ROS_INFO("Releasing object!");
       releaseObject();
     }
     context_->queueRender();
@@ -354,7 +362,7 @@ void InteractionCursorDisplay::clearOldSelections()
       boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
       if(control)
       {
-        control->setHoverHighlight(false);
+        control->setHighlight(InteractiveMarkerControl::NO_HIGHLIGHT);
         //disp_->highlighted_objects.insert(ptr);
       }
     }
@@ -364,12 +372,6 @@ void InteractionCursorDisplay::clearOldSelections()
 
 void InteractionCursorDisplay::getIntersections(const Ogre::Sphere &sphere)
 {
-  //ROS_INFO("Requesting intersections at [%.2f %.2f %.2f] with radius %.2f!",
-  //         sphere.getCenter().x,
-  //         sphere.getCenter().y,
-  //         sphere.getCenter().z,
-  //         sphere.getRadius());
-
   Ogre::DefaultSphereSceneQuery ssq(context_->getSceneManager());
   ssq.setSphere(sphere);
   MySceneQueryListener listener;
@@ -391,7 +393,7 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
     if(control)
     {
-      control->setActiveHighlight(true);
+      control->setHighlight(InteractiveMarkerControl::ACTIVE_HIGHLIGHT);
       InteractiveMarker* im = control->getParent();
       im->startDragging();
       Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = orientation.Inverse()*(position - im->getPosition());
@@ -437,10 +439,16 @@ void InteractionCursorDisplay::releaseObject()
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
     if(control)
     {
+      ROS_INFO("Releasing object [%s]", control->getName().c_str());
+      control->setHighlight(InteractiveMarkerControl::NO_HIGHLIGHT);
       control->getParent()->stopDragging();
       // Add it back to the set for later un-highlighting.
       highlighted_objects_.insert(grabbed_object_);
     }
+  }
+  else
+  {
+    ROS_WARN("Grabbed object seems to have expired before we released it!");
   }
   grabbed_object_.reset();
   dragging_ = false;
