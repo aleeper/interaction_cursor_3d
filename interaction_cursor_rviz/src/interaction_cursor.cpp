@@ -91,77 +91,77 @@ static inline geometry_msgs::Vector3 vectorOgreToMsg(const Ogre::Vector3 &o)
 }
 static inline void vectorOgreToMsg(const Ogre::Vector3 &o, geometry_msgs::Vector3 &m) { m.x = o.x; m.y = o.y; m.z = o.z; }
 
-// -----------------------------------------------------------------------------
-/** Visitor object that can be used to iterate over a collection of Renderable
-instances abstractly.
-@remarks
-Different scene objects use Renderable differently; some will have a
-single Renderable, others will have many. This visitor interface allows
-classes using Renderable to expose a clean way for external code to
-get access to the contained Renderable instance(s) that it will
-eventually add to the render queue.
-@par
-To actually have this method called, you have to call a method on the
-class containing the Renderable instances. One example is
-MovableObject::visitRenderables.
-*/
-class MyVisitor : public Ogre::Renderable::Visitor
-{
-public:
-  MyVisitor()
-    : disp_(0) {}
+//// -----------------------------------------------------------------------------
+///** Visitor object that can be used to iterate over a collection of Renderable
+//instances abstractly.
+//@remarks
+//Different scene objects use Renderable differently; some will have a
+//single Renderable, others will have many. This visitor interface allows
+//classes using Renderable to expose a clean way for external code to
+//get access to the contained Renderable instance(s) that it will
+//eventually add to the render queue.
+//@par
+//To actually have this method called, you have to call a method on the
+//class containing the Renderable instances. One example is
+//MovableObject::visitRenderables.
+//*/
+//class MyVisitor : public Ogre::Renderable::Visitor
+//{
+//public:
+//  MyVisitor()
+//    : disp_(0) {}
 
-  /** Virtual destructor needed as class has virtual methods. */
-  virtual ~MyVisitor() { }
-  /** Generic visitor method.
-  @param rend The Renderable instance being visited
-  @param lodIndex The LOD index to which this Renderable belongs. Some
-    objects support LOD and this will tell you whether the Renderable
-    you're looking at is from the top LOD (0) or otherwise
-  @param isDebug Whether this is a debug renderable or not.
-  @param pAny Optional pointer to some additional data that the class
-    calling the visitor may populate if it chooses to.
-  */
-  virtual void visit(Ogre::Renderable* rend, ushort lodIndex, bool isDebug, Ogre::Any* pAny = 0)
-  {
+//  /** Virtual destructor needed as class has virtual methods. */
+//  virtual ~MyVisitor() { }
+//  /** Generic visitor method.
+//  @param rend The Renderable instance being visited
+//  @param lodIndex The LOD index to which this Renderable belongs. Some
+//    objects support LOD and this will tell you whether the Renderable
+//    you're looking at is from the top LOD (0) or otherwise
+//  @param isDebug Whether this is a debug renderable or not.
+//  @param pAny Optional pointer to some additional data that the class
+//    calling the visitor may populate if it chooses to.
+//  */
+//  virtual void visit(Ogre::Renderable* rend, ushort lodIndex, bool isDebug, Ogre::Any* pAny = 0)
+//  {
 
-#if( OGRE_VERSION_MINOR < 8 )
-    // This static cast is INCREDIBLY unsafe, but is a temporary work around since Ogre < 1.8 does not have this.
-    Ogre::MyRenderable* myrend = static_cast<Ogre::MyRenderable*>(rend);
-    if( !myrend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
-#else
-    if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
-#endif
-    Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
+//#if( OGRE_VERSION_MINOR < 8 )
+//    // This static cast is INCREDIBLY unsafe, but is a temporary work around since Ogre < 1.8 does not have this.
+//    Ogre::MyRenderable* myrend = static_cast<Ogre::MyRenderable*>(rend);
+//    if( !myrend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+//#else
+//    if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
+//#endif
+//    Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
 
-    rviz::SelectionManager* sm = disp_->getDisplayContext()->getSelectionManager();
-    if(sm)
-    {
-      Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
-      CollObjectHandle handle = colorToHandle(colour);
+//    rviz::SelectionManager* sm = disp_->getDisplayContext()->getSelectionManager();
+//    if(sm)
+//    {
+//      Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
+//      CollObjectHandle handle = colorToHandle(colour);
 
-      rviz::SelectionHandler* handler = sm->getHandler(handle);
-      if(handle)
-      {
-        InteractiveObjectWPtr ptr = handler->getInteractiveObject();
+//      rviz::SelectionHandler* handler = sm->getHandler(handle);
+//      if(handle)
+//      {
+//        InteractiveObjectWPtr ptr = handler->getInteractiveObject();
 
-        // Don't do anything to a control if we are already grabbing its parent marker.
-        if(ptr.lock() == disp_->grabbed_object_.lock())
-          return;
+//        // Don't do anything to a control if we are already grabbing its parent marker.
+//        if(ptr.lock() == disp_->grabbed_object_.lock())
+//          return;
 
-        //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
-        boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
-        if(control && control->getVisible())
-        {
-          control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
-          disp_->highlighted_objects_.insert(ptr);
-        }
-      }
-    }
-  }
+//        //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
+//        boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+//        if(control && control->getVisible())
+//        {
+//          control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
+//          disp_->highlighted_objects_.insert(ptr);
+//        }
+//      }
+//    }
+//  }
 
-  rviz::InteractionCursorDisplay* disp_;
-};
+//  rviz::InteractionCursorDisplay* disp_;
+//};
 
 
 /** This optional class allows you to receive per-result callbacks from
@@ -174,20 +174,58 @@ class MySceneQueryListener : public Ogre::SceneQueryListener
 {
 public:
   MySceneQueryListener() : disp_(0) { }
-    virtual ~MySceneQueryListener() { }
+  virtual ~MySceneQueryListener() { }
     /** Called when a MovableObject is returned by a query.
     @remarks
         The implementor should return 'true' to continue returning objects,
         or 'false' to abandon any further results from this query.
     */
-    virtual bool queryResult(Ogre::MovableObject* object)
+  virtual bool queryResult(Ogre::MovableObject* object)
+  {
+    // Do a simple attempt to refine the search by checking the "local" oriented bounding box:
+    const Ogre::AxisAlignedBox& local_bb = object->getBoundingBox();
+    Ogre::Sphere local_query_sphere = query_sphere_;
+    local_query_sphere.setCenter(object->getParentNode()->convertWorldToLocalPosition(local_query_sphere.getCenter()));
+    local_query_sphere.setRadius(local_query_sphere.getRadius()*2); // magic number... not sure why this is needed
+    // If the sphere doesn't at least intersect the local bounding box, we skip this result.
+    if(!local_bb.intersects(local_query_sphere)) return true;
+
+
+    // If we got to here, we are assuming that we have satisfactory intersection.
+    //ROS_INFO("Sphere collides with MoveableObject [%s].",  object->getName().c_str());
+
+    // The new rviz change adds a user object binding called "pick_handle" to objects when the pick color is set.
+    Ogre::Any handle_any = object->getUserObjectBindings().getUserAny( "pick_handle" );
+
+    if( handle_any.isEmpty() )
     {
-      //ROS_INFO("Sphere collides with MoveableObject [%s].",  object->getName().c_str());
-      MyVisitor visitor;
-      visitor.disp_ = disp_;
-      object->visitRenderables( &visitor );
       return true;
     }
+    // Get the CollObjectHandle
+    CollObjectHandle handle = Ogre::any_cast<CollObjectHandle>(handle_any);
+
+    rviz::SelectionHandler* handler = disp_->getDisplayContext()->getSelectionManager()->getHandler(handle);
+    if(handle)
+    {
+      InteractiveObjectWPtr ptr = handler->getInteractiveObject();
+
+      // Don't do anything to a control if we are already grabbing its parent marker.
+      if(ptr.lock() == disp_->grabbed_object_.lock())
+        return true;
+
+      //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
+      boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+      if(control && control->getVisible())
+      {
+        control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
+        disp_->highlighted_objects_.insert(ptr);
+
+        // returning false means no subsequent object will be checked.
+        return false;
+      }
+    }
+    return true;
+  }
 
 
     /** Called when a WorldFragment is returned by a query.
@@ -201,6 +239,7 @@ public:
       return true;
     }
     rviz::InteractionCursorDisplay* disp_;
+    Ogre::Sphere query_sphere_;
 };
 
 // -----------------------------------------------------------------------------
@@ -221,7 +260,7 @@ InteractionCursorDisplay::InteractionCursorDisplay()
 
   show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
                                                  "Enables display of cursor shape.",
-                                                 this);
+                                                 this, SLOT( updateShape() ));
 
   shape_scale_property_ = new FloatProperty( "Cursor Radius", 0.05,
                                         "Size of search sphere, in meters.",
@@ -230,7 +269,7 @@ InteractionCursorDisplay::InteractionCursorDisplay()
 
   show_cursor_axes_property_ = new BoolProperty("Show Axes", true,
                                                 "Enables display of cursor axes.",
-                                                this);
+                                                this, SLOT( updateAxes()));
 
   axes_length_property_ = new FloatProperty( "Axes Length", 0.1,
                                         "Length of each axis, in meters.",
@@ -289,15 +328,45 @@ void InteractionCursorDisplay::onDisable()
 void InteractionCursorDisplay::updateAxes()
 {
   cursor_axes_->set( axes_length_property_->getFloat(), axes_radius_property_->getFloat() );
+  cursor_axes_->getSceneNode()->setVisible( show_cursor_axes_property_->getBool(), true);
   context_->queueRender();
 }
 
 
 void InteractionCursorDisplay::updateShape()
 {
-  Ogre::Vector3 shape_scale( 1.05/2.0*shape_scale_property_->getFloat());
+  // multiply by 2 because shape_scale sets sphere diameter
+  Ogre::Vector3 shape_scale( 2*1.02*shape_scale_property_->getFloat());
   cursor_shape_->setScale( shape_scale );
+  cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool(), true );
   context_->queueRender();
+}
+
+ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_state)
+{
+  ViewportMouseEvent event;
+  event.viewport = context_->getSceneManager()->getCurrentViewport();
+
+  if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::NONE)
+  {
+    event.type = QEvent::None;
+  }
+  if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::GRAB)
+  {
+    event.type = QEvent::MouseButtonPress;
+    event.acting_button = Qt::LeftButton;
+  }
+  if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::KEEP_ALIVE)
+  {
+    event.type = QEvent::MouseMove;
+    event.buttons_down = event.buttons_down & Qt::LeftButton;
+  }
+  if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::RELEASE)
+  {
+    event.type = QEvent::MouseButtonRelease;
+    event.acting_button = Qt::LeftButton;
+  }
+  return event;
 }
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
@@ -311,25 +380,29 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
   {
     cursor_node_->setPosition( position );
     cursor_node_->setOrientation( quaternion );
+    updateShape();
 
     Ogre::Sphere sphere(position, shape_scale_property_->getFloat());
     clearOldSelections();
-    getIntersections(sphere);
 
-    if(icu_cptr->button_state == icu_cptr->GRAB)
+    if(icu_cptr->button_state == icu_cptr->NONE)
     {
-      //ROS_INFO("Grabbing object!");
-      grabObject(position, quaternion);
+      getIntersections(sphere);
+    }
+    else if(icu_cptr->button_state == icu_cptr->GRAB)
+    {
+      getIntersections(sphere);
+      grabObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
     }
     else if(icu_cptr->button_state == icu_cptr->KEEP_ALIVE && dragging_)
     {
       //ROS_INFO("Updating object pose!");
-      updateGrabbedObject(position, quaternion);
+      updateGrabbedObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
     }
     else if(icu_cptr->button_state == icu_cptr->RELEASE && dragging_)
     {
       //ROS_INFO("Releasing object!");
-      releaseObject();
+      releaseObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
     }
     context_->queueRender();
 
@@ -372,14 +445,15 @@ void InteractionCursorDisplay::clearOldSelections()
 
 void InteractionCursorDisplay::getIntersections(const Ogre::Sphere &sphere)
 {
-  Ogre::DefaultSphereSceneQuery ssq(context_->getSceneManager());
-  ssq.setSphere(sphere);
+  Ogre::SphereSceneQuery* ssq = context_->getSceneManager()->createSphereQuery(sphere);
   MySceneQueryListener listener;
   listener.disp_ = this;
-  ssq.execute(&listener);
+  listener.query_sphere_ = sphere;
+  ssq->execute(&listener);
+  context_->getSceneManager()->destroyQuery(ssq);
 }
 
-void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation)
+void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
   if(highlighted_objects_.begin() == highlighted_objects_.end())
     return;
@@ -393,6 +467,7 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
     if(control)
     {
+      //control->handle3DCursorEvent(event, position);
       control->setHighlight(InteractiveMarkerControl::ACTIVE_HIGHLIGHT);
       InteractiveMarker* im = control->getParent();
       im->startDragging();
@@ -414,13 +489,14 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
   }
 }
 
-void InteractionCursorDisplay::updateGrabbedObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation)
+void InteractionCursorDisplay::updateGrabbedObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
   if(!grabbed_object_.expired())
   {
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
     if(control)
     {
+      //control->handle3DCursorEvent(event, position);
       const std::string& control_name = control->getName();
       InteractiveMarker* im = control->getParent();
       Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = position_offset_at_grab_;
@@ -432,7 +508,7 @@ void InteractionCursorDisplay::updateGrabbedObject(const Ogre::Vector3 &position
   }
 }
 
-void InteractionCursorDisplay::releaseObject()
+void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
   if(!grabbed_object_.expired())
   {
@@ -440,6 +516,8 @@ void InteractionCursorDisplay::releaseObject()
     if(control)
     {
       ROS_INFO("Releasing object [%s]", control->getName().c_str());
+      //control->handle3DCursorEvent(event, position);
+
       control->setHighlight(InteractiveMarkerControl::NO_HIGHLIGHT);
       control->getParent()->stopDragging();
       // Add it back to the set for later un-highlighting.
