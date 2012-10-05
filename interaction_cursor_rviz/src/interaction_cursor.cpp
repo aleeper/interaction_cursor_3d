@@ -38,6 +38,7 @@
 #include "rviz/properties/float_property.h"
 #include "rviz/properties/tf_frame_property.h"
 #include "rviz/properties/ros_topic_property.h"
+#include "rviz/view_manager.h"
 
 #include "rviz/selection/forwards.h"
 #include "rviz/selection/selection_handler.h"
@@ -91,85 +92,8 @@ static inline geometry_msgs::Vector3 vectorOgreToMsg(const Ogre::Vector3 &o)
 }
 static inline void vectorOgreToMsg(const Ogre::Vector3 &o, geometry_msgs::Vector3 &m) { m.x = o.x; m.y = o.y; m.z = o.z; }
 
-//// -----------------------------------------------------------------------------
-///** Visitor object that can be used to iterate over a collection of Renderable
-//instances abstractly.
-//@remarks
-//Different scene objects use Renderable differently; some will have a
-//single Renderable, others will have many. This visitor interface allows
-//classes using Renderable to expose a clean way for external code to
-//get access to the contained Renderable instance(s) that it will
-//eventually add to the render queue.
-//@par
-//To actually have this method called, you have to call a method on the
-//class containing the Renderable instances. One example is
-//MovableObject::visitRenderables.
-//*/
-//class MyVisitor : public Ogre::Renderable::Visitor
-//{
-//public:
-//  MyVisitor()
-//    : disp_(0) {}
 
-//  /** Virtual destructor needed as class has virtual methods. */
-//  virtual ~MyVisitor() { }
-//  /** Generic visitor method.
-//  @param rend The Renderable instance being visited
-//  @param lodIndex The LOD index to which this Renderable belongs. Some
-//    objects support LOD and this will tell you whether the Renderable
-//    you're looking at is from the top LOD (0) or otherwise
-//  @param isDebug Whether this is a debug renderable or not.
-//  @param pAny Optional pointer to some additional data that the class
-//    calling the visitor may populate if it chooses to.
-//  */
-//  virtual void visit(Ogre::Renderable* rend, ushort lodIndex, bool isDebug, Ogre::Any* pAny = 0)
-//  {
-
-//#if( OGRE_VERSION_MINOR < 8 )
-//    // This static cast is INCREDIBLY unsafe, but is a temporary work around since Ogre < 1.8 does not have this.
-//    Ogre::MyRenderable* myrend = static_cast<Ogre::MyRenderable*>(rend);
-//    if( !myrend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
-//#else
-//    if( !rend->hasCustomParameter(PICK_COLOR_PARAMETER) ) return;
-//#endif
-//    Ogre::Vector4 vec = rend->getCustomParameter(PICK_COLOR_PARAMETER);
-
-//    rviz::SelectionManager* sm = disp_->getDisplayContext()->getSelectionManager();
-//    if(sm)
-//    {
-//      Ogre::ColourValue colour(vec.x, vec.y, vec.z, 1.0);
-//      CollObjectHandle handle = colorToHandle(colour);
-
-//      rviz::SelectionHandler* handler = sm->getHandler(handle);
-//      if(handle)
-//      {
-//        InteractiveObjectWPtr ptr = handler->getInteractiveObject();
-
-//        // Don't do anything to a control if we are already grabbing its parent marker.
-//        if(ptr.lock() == disp_->grabbed_object_.lock())
-//          return;
-
-//        //weak_ptr<Fruit> fruit = weak_ptr<Fruit>(dynamic_pointer_cast<Fruit>(food.lock());
-//        boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
-//        if(control && control->getVisible())
-//        {
-//          control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
-//          disp_->highlighted_objects_.insert(ptr);
-//        }
-//      }
-//    }
-//  }
-
-//  rviz::InteractionCursorDisplay* disp_;
-//};
-
-
-/** This optional class allows you to receive per-result callbacks from
-    SceneQuery executions instead of a single set of consolidated results.
-@remarks
-    You should override this with your own subclass. Note that certain query
-    classes may refine this listener interface.
-*/
+/** This class is needed to process scene query results. */
 class MySceneQueryListener : public Ogre::SceneQueryListener
 {
 public:
@@ -298,8 +222,6 @@ void InteractionCursorDisplay::updateTopic()
 
 void InteractionCursorDisplay::onInitialize()
 {
-  //frame_property_->setFrameManager( context_->getFrameManager() );
-
   cursor_node_ = context_->getSceneManager()->getRootSceneNode()->createChildSceneNode();
   cursor_node_->setVisible( isEnabled() );
 
@@ -371,13 +293,13 @@ ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_sta
     event.type = QEvent::MouseButtonRelease;
     event.acting_button = Qt::RightButton;
     event.buttons_down = Qt::NoButton;
+    event.panel = context_->getViewManager()->getRenderPanel();
   }
   return event;
 }
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
 {
-  //ROS_INFO("Got a InteractionCursor update!");
   std::string frame = icu_cptr->pose.header.frame_id;
   Ogre::Vector3 position;
   Ogre::Quaternion quaternion;
@@ -387,6 +309,11 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     cursor_node_->setPosition( position );
     cursor_node_->setOrientation( quaternion );
     updateShape();
+
+    // Moving view controller:
+    // could get and then set to force a certain type
+    //context_->getViewManager()->getCurrent();
+
 
     Ogre::Sphere sphere(position, shape_scale_property_->getFloat());
     clearOldSelections();
@@ -410,8 +337,10 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     }
     else if(icu_cptr->button_state == icu_cptr->QUERY_MENU)
     {
-      ROS_WARN("QUERY_MENU doesn't do anything yet because I need a RenderPanel to bring up menus.");
-      //grabObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
+      getIntersections(sphere);
+      requestMenu(position, quaternion, createMouseEvent(icu_cptr->button_state));
+      // TODO fix location of screen popups
+      // TODO add support for cursor up/down events
     }
     context_->queueRender();
 
@@ -519,8 +448,21 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
   }
   grabbed_object_.reset();
   //dragging_ = false;
+}
 
-
+void InteractionCursorDisplay::requestMenu(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
+{
+  if(highlighted_objects_.begin() == highlighted_objects_.end())
+    return;
+  InteractiveObjectWPtr ptr = *(highlighted_objects_.begin());
+  if(!ptr.expired())
+  {
+    boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+    if(control)
+    {
+      control->handle3DCursorEvent(event, position, orientation);
+    }
+  }
 }
 
 //void InteractionCursorDisplay::
