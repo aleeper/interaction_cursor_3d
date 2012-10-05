@@ -40,7 +40,6 @@ class InteractionTest(object):
     #print "NONE = %d, KEEP_ALIVE = %d, GRAB = %d, RELEASE = %d"%(icu.NONE, icu.KEEP_ALIVE, icu.GRAB, icu.RELEASE)
 
     button = paddle.buttons[0]
-    print button
     if (button and not self.dragging):
       self.dragging = True
       icu.button_state = icu.GRAB
@@ -51,8 +50,9 @@ class InteractionTest(object):
       icu.button_state = icu.RELEASE
     elif (not button and not self.dragging):
       icu.button_state = icu.NONE
+      self.dragging = False
     
-    print "Publishing a message!" # button = %d"%(button)
+    print "Publishing a message! %d"%(icu.button_state) # button = %d"%(button)
     self.pub.publish(icu)
     #self.rate.sleep()
 

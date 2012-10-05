@@ -359,7 +359,8 @@ ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_sta
   if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::KEEP_ALIVE)
   {
     event.type = QEvent::MouseMove;
-    event.buttons_down = event.buttons_down & Qt::LeftButton;
+    event.buttons_down = event.buttons_down | Qt::LeftButton;
+    //event.acting_button = Qt::LeftButton;
   }
   if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::RELEASE)
   {
@@ -394,12 +395,12 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
       getIntersections(sphere);
       grabObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
     }
-    else if(icu_cptr->button_state == icu_cptr->KEEP_ALIVE && dragging_)
+    else if(icu_cptr->button_state == icu_cptr->KEEP_ALIVE)// && dragging_)
     {
       //ROS_INFO("Updating object pose!");
       updateGrabbedObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
     }
-    else if(icu_cptr->button_state == icu_cptr->RELEASE && dragging_)
+    else if(icu_cptr->button_state == icu_cptr->RELEASE)// && dragging_)
     {
       //ROS_INFO("Releasing object!");
       releaseObject(position, quaternion, createMouseEvent(icu_cptr->button_state));
@@ -467,22 +468,22 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
     if(control)
     {
-      //control->handle3DCursorEvent(event, position);
-      control->setHighlight(InteractiveMarkerControl::ACTIVE_HIGHLIGHT);
-      InteractiveMarker* im = control->getParent();
-      im->startDragging();
-      Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = orientation.Inverse()*(position - im->getPosition());
-      position_offset_at_grab_ = r_marker_to_cursor_in_cursor_frame;
-      orientation_offset_at_grab_ = orientation.Inverse()*im->getOrientation();
-      marker_frame_at_grab_= im->getReferenceFrame();
-      std::string marker_name = im->getName();
-      ROS_INFO("Grabbed marker [%s] with reference frame [%s], position offset [%.3f %.3f %.3f] and quaternion offset [%.2f %.2f %.2f %.2f]",
-               marker_name.c_str(), marker_frame_at_grab_.c_str(),
-               position_offset_at_grab_.x, position_offset_at_grab_.y, position_offset_at_grab_.z,
-               orientation_offset_at_grab_.x, orientation_offset_at_grab_.y, orientation_offset_at_grab_.z, orientation_offset_at_grab_.w);
+        control->handle3DCursorEvent(event, position);
+//      control->setHighlight(InteractiveMarkerControl::ACTIVE_HIGHLIGHT);
+//      InteractiveMarker* im = control->getParent();
+//      im->startDragging();
+//      Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = orientation.Inverse()*(position - im->getPosition());
+//      position_offset_at_grab_ = r_marker_to_cursor_in_cursor_frame;
+//      orientation_offset_at_grab_ = orientation.Inverse()*im->getOrientation();
+//      marker_frame_at_grab_= im->getReferenceFrame();
+//      std::string marker_name = im->getName();
+//      ROS_INFO("Grabbed marker [%s] with reference frame [%s], position offset [%.3f %.3f %.3f] and quaternion offset [%.2f %.2f %.2f %.2f]",
+//               marker_name.c_str(), marker_frame_at_grab_.c_str(),
+//               position_offset_at_grab_.x, position_offset_at_grab_.y, position_offset_at_grab_.z,
+//               orientation_offset_at_grab_.x, orientation_offset_at_grab_.y, orientation_offset_at_grab_.z, orientation_offset_at_grab_.w);
 
       grabbed_object_ = ptr;
-      dragging_ = true;
+      //dragging_ = true;
 
       //disp_->highlighted_objects.insert(ptr);
     }
@@ -493,18 +494,24 @@ void InteractionCursorDisplay::updateGrabbedObject(const Ogre::Vector3 &position
 {
   if(!grabbed_object_.expired())
   {
+    //ROS_INFO("Locking control...");
     boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
     if(control)
     {
-      //control->handle3DCursorEvent(event, position);
-      const std::string& control_name = control->getName();
-      InteractiveMarker* im = control->getParent();
-      Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = position_offset_at_grab_;
-      Ogre::Quaternion marker_orientation = orientation*orientation_offset_at_grab_;
-      Ogre::Vector3 marker_position = orientation*(orientation.Inverse()*position - r_marker_to_cursor_in_cursor_frame);
-      im->setPose( marker_position, marker_orientation, control_name );
+      //ROS_INFO("updating...");
+      control->handle3DCursorEvent(event, position);
+//      const std::string& control_name = control->getName();
+//      InteractiveMarker* im = control->getParent();
+//      Ogre::Vector3 r_marker_to_cursor_in_cursor_frame = position_offset_at_grab_;
+//      Ogre::Quaternion marker_orientation = orientation*orientation_offset_at_grab_;
+//      Ogre::Vector3 marker_position = orientation*(orientation.Inverse()*position - r_marker_to_cursor_in_cursor_frame);
+//      im->setPose( marker_position, marker_orientation, control_name );
 
     }
+  }
+  else
+  {
+    ROS_WARN("Grabbed object weak pointer has expired...");
   }
 }
 
@@ -516,11 +523,11 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
     if(control)
     {
       ROS_INFO("Releasing object [%s]", control->getName().c_str());
-      //control->handle3DCursorEvent(event, position);
+      control->handle3DCursorEvent(event, position);
 
-      control->setHighlight(InteractiveMarkerControl::NO_HIGHLIGHT);
-      control->getParent()->stopDragging();
-      // Add it back to the set for later un-highlighting.
+//      control->setHighlight(InteractiveMarkerControl::NO_HIGHLIGHT);
+//      control->getParent()->stopDragging();
+//      // Add it back to the set for later un-highlighting.
       highlighted_objects_.insert(grabbed_object_);
     }
   }
@@ -529,7 +536,7 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
     ROS_WARN("Grabbed object seems to have expired before we released it!");
   }
   grabbed_object_.reset();
-  dragging_ = false;
+  //dragging_ = false;
 
 
 }
