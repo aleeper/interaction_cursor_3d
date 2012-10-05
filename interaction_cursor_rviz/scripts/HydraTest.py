@@ -18,7 +18,8 @@ class InteractionTest(object):
     self.pub = rospy.Publisher("/rviz/interaction_cursor/update", InteractionCursorUpdate)
     self.sub = rospy.Subscriber("hydra_calib", Hydra, self.hydraCB)
     
-    self.dragging = False
+    self.left_down = False
+    self.right_down = False
     #rate_float = 10
     #self.rate = rospy.Rate(rate_float)
     self.rate = rospy.Rate(10)
@@ -39,18 +40,29 @@ class InteractionTest(object):
     
     #print "NONE = %d, KEEP_ALIVE = %d, GRAB = %d, RELEASE = %d"%(icu.NONE, icu.KEEP_ALIVE, icu.GRAB, icu.RELEASE)
 
-    button = paddle.buttons[0]
-    if (button and not self.dragging):
-      self.dragging = True
+    button = paddle.trigger > 0.8
+    right_click = paddle.buttons[0]
+    if (button and not self.left_down):
+      self.left_down = True
       icu.button_state = icu.GRAB
-    elif (button and self.dragging):
+    elif (button and self.left_down):
       icu.button_state = icu.KEEP_ALIVE
-    elif (not button and self.dragging):
-      self.dragging = False
+    elif (not button and self.left_down):
+      self.left_down = False
       icu.button_state = icu.RELEASE
-    elif (not button and not self.dragging):
+    elif (not button and not self.left_down):
       icu.button_state = icu.NONE
-      self.dragging = False
+      self.left_down = False
+    
+    if (right_click and not self.right_down):
+      self.right_down = True
+      icu.button_state = icu.QUERY_MENU
+    elif (right_click and self.right_down):
+      pass
+    elif (not right_click and self.right_down):
+      self.right_down = False
+    elif (not right_click and not self.right_down):
+      self.right_down = False
     
     print "Publishing a message! %d"%(icu.button_state) # button = %d"%(button)
     self.pub.publish(icu)
