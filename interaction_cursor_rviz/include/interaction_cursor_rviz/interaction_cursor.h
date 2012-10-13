@@ -91,6 +91,15 @@ protected:
 
   rviz::ViewportMouseEvent createMouseEvent(uint8_t button_state);
 
+  void generateKeyEvent(uint8_t key_event);
+
+  void sendInteractionFeedback(uint8_t event_type,
+                               const boost::shared_ptr<InteractiveMarkerControl>& control,
+                               const Ogre::Vector3& cursor_pos,
+                               const Ogre::Quaternion& cursor_rot);
+
+  void getActiveControl(InteractiveObjectWPtr& ptr, boost::shared_ptr<InteractiveMarkerControl> & control);
+
   void grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event);
   void updateGrabbedObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event);
   void releaseObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event);
@@ -104,7 +113,10 @@ protected Q_SLOTS:
   void updateShape();
 
   /** @brief Update the topic used to subscribe to updates. */
-  virtual void updateTopic();
+  virtual void changeUpdateTopic();
+
+  /** @brief Update the topic used to publish feedback. */
+  virtual void changeFeedbackTopic();
 
 protected:
 
@@ -122,6 +134,7 @@ protected:
   FloatProperty* shape_scale_property_;
   //TfFrameProperty* frame_property_;
   RosTopicProperty* update_topic_property_;
+  RosTopicProperty* feedback_topic_property_;
 
   ros::Subscriber subscriber_update_;
   ros::Publisher publisher_feedback_;

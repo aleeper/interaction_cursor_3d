@@ -20,6 +20,8 @@ class InteractionTest(object):
     
     self.left_down = False
     self.right_down = False
+    self.joy_click = False
+    self.joystick_active = False
     #rate_float = 10
     #self.rate = rospy.Rate(rate_float)
     self.rate = rospy.Rate(10)
@@ -63,8 +65,31 @@ class InteractionTest(object):
       self.right_down = False
     elif (not right_click and not self.right_down):
       self.right_down = False
+   
+    joy = paddle.joy
+    joy_on = abs(joy[0]) > 0.8 or abs(joy[1]) > 0.8
+    if (joy_on and not self.joystick_active):
+      self.joystick_active = True
+      icu.key_event = (joy[0]>0.8)*icu.KEY_RIGHT + (joy[0]<-0.8)*icu.KEY_LEFT + (joy[1]>0.8)*icu.KEY_UP + (joy[1]<-0.8)*icu.KEY_DOWN
+    elif (joy_on and self.joystick_active):
+      pass
+    elif (not joy_on and self.joystick_active):
+      self.joystick_active = False
+    elif (not joy_on and not self.joystick_active):
+      self.joystick_active = False
     
-    print "Publishing a message! %d"%(icu.button_state) # button = %d"%(button)
+    joy_click = paddle.buttons[6]
+    if (joy_click and not self.joy_click):
+      self.joy_click = True
+      icu.key_event = icu.KEY_ENTER
+    elif (joy_click and self.joy_click):
+      pass
+    elif (not joy_click and self.joy_click):
+      self.joy_click = False
+    elif (not joy_click and not self.joy_click):
+      self.joy_click = False
+     
+    print "Publishing a message! Button: %d, Key: %d"%(icu.button_state, icu.key_event) # button = %d"%(button)
     self.pub.publish(icu)
     #self.rate.sleep()
 

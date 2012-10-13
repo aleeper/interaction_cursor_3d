@@ -28,10 +28,13 @@
  */
 
 #include "interaction_cursor_rviz/interaction_cursor.h"
+#include "interaction_cursor_msgs/InteractionCursorUpdate.h"
+#include "interaction_cursor_msgs/InteractionCursorFeedback.h"
 
 
 #include "rviz/display_context.h"
 #include "rviz/frame_manager.h"
+#include "rviz/render_panel.h"
 #include "rviz/ogre_helpers/shape.h"
 #include "rviz/ogre_helpers/axes.h"
 #include "rviz/ogre_helpers/custom_parameter_indices.h"
@@ -50,8 +53,13 @@
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
 #include <OGRE/OgreRenderable.h>
+#include <OGRE/OgreRenderWindow.h>
+
+#include <QApplication>
 
 #include <boost/bind.hpp>
+
+using namespace interaction_cursor_msgs;
 
 
 #if( OGRE_VERSION_MINOR < 8 )
@@ -92,6 +100,13 @@ static inline geometry_msgs::Vector3 vectorOgreToMsg(const Ogre::Vector3 &o)
 }
 static inline void vectorOgreToMsg(const Ogre::Vector3 &o, geometry_msgs::Vector3 &m) { m.x = o.x; m.y = o.y; m.z = o.z; }
 
+static inline geometry_msgs::Quaternion quaternionOgreToMsg(const Ogre::Quaternion &o)
+{
+  geometry_msgs::Quaternion m;
+  m.w = o.w; m.x = o.x; m.y = o.y; m.z = o.z;
+  return m;
+}
+static inline void quaternionOgreToMsg(const Ogre::Quaternion &o, geometry_msgs::Quaternion &m)  { m.w = o.w; m.x = o.x; m.y = o.y; m.z = o.z; }
 
 /** This class is needed to process scene query results. */
 class MySceneQueryListener : public Ogre::SceneQueryListener
@@ -177,10 +192,15 @@ InteractionCursorDisplay::InteractionCursorDisplay()
 {
   grabbed_object_.reset();
 
-  update_topic_property_ = new RosTopicProperty( "Update Topic", "",
+  update_topic_property_ = new RosTopicProperty( "Update Topic", "/interaction_cursor/update",
                                                         ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorUpdate>(),
                                                         "interaction_cursor_msgs::InteractionCursorUpdate topic to subscribe to.",
-                                                        this, SLOT( updateTopic() ));
+                                                        this, SLOT( changeUpdateTopic() ));
+
+  feedback_topic_property_ = new RosTopicProperty( "Feedback Topic", "/interaction_cursor/feedback",
+                                                        ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorFeedback>(),
+                                                        "interaction_cursor_msgs::InteractionCursorFeedback topic to publish feedback to.",
+                                                        this, SLOT( changeFeedbackTopic() ));
 
   show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
                                                  "Enables display of cursor shape.",
@@ -213,11 +233,17 @@ InteractionCursorDisplay::~InteractionCursorDisplay()
   context_->getSceneManager()->destroySceneNode( cursor_node_ );
 }
 
-void InteractionCursorDisplay::updateTopic()
+void InteractionCursorDisplay::changeUpdateTopic()
 {
   subscriber_update_ = nh_.subscribe<interaction_cursor_msgs::InteractionCursorUpdate>
                               (update_topic_property_->getStdString(), 10,
                               boost::bind(&InteractionCursorDisplay::updateCallback, this, _1));
+}
+
+void InteractionCursorDisplay::changeFeedbackTopic()
+{
+  publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
+                              (feedback_topic_property_->getStdString(), 10);
 }
 
 void InteractionCursorDisplay::onInitialize()
@@ -234,7 +260,8 @@ void InteractionCursorDisplay::onInitialize()
   cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool() );
 
   // Should this happen onEnable and then get killed later?
-  updateTopic();
+  changeUpdateTopic();
+  changeFeedbackTopic();
 }
 
 void InteractionCursorDisplay::onEnable()
@@ -267,7 +294,8 @@ void InteractionCursorDisplay::updateShape()
 ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_state)
 {
   ViewportMouseEvent event;
-  event.viewport = context_->getSceneManager()->getCurrentViewport();
+  event.panel = context_->getViewManager()->getRenderPanel();
+  event.viewport = context_->getViewManager()->getRenderPanel()->getRenderWindow()->getViewport(0);
 
   if(button_state == interaction_cursor_msgs::InteractionCursorUpdate::NONE)
   {
@@ -293,9 +321,56 @@ ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_sta
     event.type = QEvent::MouseButtonRelease;
     event.acting_button = Qt::RightButton;
     event.buttons_down = Qt::NoButton;
-    event.panel = context_->getViewManager()->getRenderPanel();
   }
   return event;
+}
+
+void InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
+{
+  QKeyEvent *event = 0;
+
+  switch(key_event)
+  {
+  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_UP):
+    ROS_INFO("Trying to set an KEY_UP event...");
+    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+    break;
+  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_DOWN):
+    ROS_INFO("Trying to set an KEY_DOWN event...");
+    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+    break;
+  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_LEFT):
+    ROS_INFO("Trying to set an KEY_LEFT event...");
+    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+    break;
+  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_RIGHT):
+    ROS_INFO("Trying to set an KEY_RIGHT event...");
+    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+    break;
+  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ENTER):
+    ROS_INFO("Trying to set an KEY_ENTER event...");
+    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
+    break;
+  default:
+    break;
+  }
+
+  if (event)
+  {
+      QObject* obj = this;
+      while(obj)
+      {
+        if(obj->parent())
+          obj = obj->parent();
+        else
+          break;
+      }
+      ROS_INFO("posting...");
+      // Hopefully now obj points to the QMainWindow...
+      QApplication::postEvent(obj, event);
+      //emit signalKeyPress(emitKey);
+  }
+
 }
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
@@ -318,9 +393,19 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     Ogre::Sphere sphere(position, shape_scale_property_->getFloat());
     clearOldSelections();
 
+    // Fake some keyboard events for menu navigation
+    // TODO doesn't work yet...
+    generateKeyEvent(icu_cptr->key_event);
+
     if(icu_cptr->button_state == icu_cptr->NONE)
     {
       getIntersections(sphere);
+      boost::shared_ptr<InteractiveMarkerControl> control;
+      InteractiveObjectWPtr ptr;
+      getActiveControl(ptr, control);
+      if(control)
+        sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::NONE,
+                                control, position, quaternion);
     }
     else if(icu_cptr->button_state == icu_cptr->GRAB)
     {
@@ -341,6 +426,7 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
       requestMenu(position, quaternion, createMouseEvent(icu_cptr->button_state));
       // TODO fix location of screen popups
       // TODO add support for cursor up/down events
+
     }
     context_->queueRender();
 
@@ -391,63 +477,147 @@ void InteractionCursorDisplay::getIntersections(const Ogre::Sphere &sphere)
   context_->getSceneManager()->destroyQuery(ssq);
 }
 
-void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
+void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
+                                                       const boost::shared_ptr<InteractiveMarkerControl>& control,
+                                                       const Ogre::Vector3& cursor_pos,
+                                                       const Ogre::Quaternion& cursor_rot)
 {
-  if(highlighted_objects_.begin() == highlighted_objects_.end())
-    return;
+  std::string name = "", description = "";
+  int interaction_mode = 0;
+  if(control)
+  {
+    name = control->getName();
+    description = control->getDescription().toStdString();
+    interaction_mode = control->getInteractionMode();
+  }
 
-  InteractiveObjectWPtr ptr = *(highlighted_objects_.begin());
-  // Remove the object from the set so that we don't un-highlight it later on accident.
-  highlighted_objects_.erase(highlighted_objects_.begin());
+  std::string code_string = "control_frame: ";
+  if( description.find(code_string) != std::string::npos
+     && (event_type == interaction_cursor_msgs::InteractionCursorFeedback::NONE || event_type == interaction_cursor_msgs::InteractionCursorFeedback::GRABBED ))
+  {
+    std::string frame = description;
+    frame.replace(0, code_string.length(), "" );
+
+    // Extract frame and compute pose for the grabbed marker
+    interaction_cursor_msgs::InteractionCursorFeedback fb;
+    fb.event_type = event_type;
+    if(interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_AXIS
+       || interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_PLANE
+       || interaction_mode == visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS)
+      fb.attachment_type = fb.POSITION;
+    else if(interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE)
+      fb.attachment_type = fb.POSITION_AND_ORIENTATION;
+
+    Ogre::Vector3 pos_world_to_control;
+    Ogre::Quaternion rot_world_to_control;
+    if( context_->getFrameManager()->getTransform(frame, ros::Time(0), pos_world_to_control, rot_world_to_control))
+    {
+      Ogre::Vector3 pos_control_to_cursor_in_control_frame = rot_world_to_control.Inverse()*(cursor_pos - pos_world_to_control);
+      Ogre::Quaternion rot_control_to_cursor = rot_world_to_control.Inverse()*cursor_rot;
+      pointOgreToMsg(pos_control_to_cursor_in_control_frame, fb.pose.pose.position);
+      quaternionOgreToMsg(rot_control_to_cursor, fb.pose.pose.orientation);
+      fb.pose.header.frame_id = frame;
+      fb.pose.header.stamp = ros::Time(0);
+      publisher_feedback_.publish(fb);
+    }
+    else
+    {
+      std::string error;
+      if( context_->getFrameManager()->transformHasProblems( frame, ros::Time(), error ))
+      {
+        setStatus( StatusProperty::Error, "Transform", QString::fromStdString( error ));
+      }
+      else
+      {
+        setStatus( StatusProperty::Error,
+                   "Transform",
+                   "Could not transform from [" + QString::fromStdString(frame) + "] to Fixed Frame [" + fixed_frame_ + "] for an unknown reason" );
+      }
+    }
+  }
+  else // No control frame detected
+  {
+    //ROS_INFO("No control frame detected for control [%s] with description [%s]", name.c_str(), description.c_str());
+    interaction_cursor_msgs::InteractionCursorFeedback fb;
+    fb.event_type = event_type;
+    publisher_feedback_.publish(fb);
+  }
+}
+
+void InteractionCursorDisplay::getActiveControl(InteractiveObjectWPtr& ptr, boost::shared_ptr<InteractiveMarkerControl>& control)
+{
+  if(!grabbed_object_.expired())
+    ptr = grabbed_object_;
+  else if(highlighted_objects_.begin() == highlighted_objects_.end())
+    return;
+  else
+    ptr = *(highlighted_objects_.begin());
+
+  //// Remove the object from the set so that we don't un-highlight it later on accident.
+  //highlighted_objects_.erase(highlighted_objects_.begin());
 
   if(!ptr.expired())
   {
-    boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
-    if(control)
-    {
-      control->handle3DCursorEvent(event, position, orientation);
-      grabbed_object_ = ptr;
-    }
+    control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+  }
+}
+
+void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
+{
+  boost::shared_ptr<InteractiveMarkerControl> control;
+  InteractiveObjectWPtr ptr;
+  getActiveControl(ptr, control);
+  if(control)
+  {
+    control->handle3DCursorEvent(event, position, orientation);
+    sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::GRABBED,
+                            control, position, orientation);
+    grabbed_object_ = ptr;
+    dragging_ = true;
   }
 }
 
 void InteractionCursorDisplay::updateGrabbedObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
-  if(!grabbed_object_.expired())
+  boost::shared_ptr<InteractiveMarkerControl> control;
+  InteractiveObjectWPtr ptr;
+  getActiveControl(ptr, control);
+  if(dragging_ && control)
   {
-    //ROS_INFO("Locking control...");
-    boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
-    if(control)
-    {
-      control->handle3DCursorEvent(event, position, orientation);
-    }
+    control->handle3DCursorEvent(event, position, orientation);
+    sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::KEEP_ALIVE,
+                            control, position, orientation);
   }
-  else
+  else if(dragging_)
   {
-    ROS_WARN("Grabbed object weak pointer has expired...");
+    ROS_WARN("Grabbed object weak pointer seems to have expired...");
+    sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::LOST_GRASP,
+                            boost::shared_ptr<InteractiveMarkerControl>(), position, orientation);
     grabbed_object_.reset();
+    dragging_ = false;
   }
 }
 
 void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
-  if(!grabbed_object_.expired())
+  boost::shared_ptr<InteractiveMarkerControl> control;
+  InteractiveObjectWPtr ptr;
+  getActiveControl(ptr, control);
+  if(dragging_ && control)
   {
-    boost::shared_ptr<InteractiveMarkerControl> control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(grabbed_object_.lock());
-    if(control)
-    {
-      ROS_INFO("Releasing object [%s]", control->getName().c_str());
-      control->handle3DCursorEvent(event, position, orientation);
-      // Add it back to the set for later un-highlighting.
-      highlighted_objects_.insert(grabbed_object_);
-    }
+    ROS_INFO("Releasing object [%s]", control->getName().c_str());
+    control->handle3DCursorEvent(event, position, orientation);
+    // Add it back to the set for later un-highlighting.
+    highlighted_objects_.insert(grabbed_object_);
+    sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::RELEASED,
+                            control, position, orientation);
   }
-  else
+  else if( dragging_ )
   {
     ROS_WARN("Grabbed object seems to have expired before we released it!");
   }
   grabbed_object_.reset();
-  //dragging_ = false;
+  dragging_ = false;
 }
 
 void InteractionCursorDisplay::requestMenu(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
