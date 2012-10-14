@@ -551,10 +551,12 @@ void InteractionCursorDisplay::getActiveControl(InteractiveObjectWPtr& ptr, boos
   else if(highlighted_objects_.begin() == highlighted_objects_.end())
     return;
   else
+  {
     ptr = *(highlighted_objects_.begin());
+    // Remove the object from the set so that we don't un-highlight it later on accident.
+    highlighted_objects_.erase(highlighted_objects_.begin());
+  }
 
-  //// Remove the object from the set so that we don't un-highlight it later on accident.
-  //highlighted_objects_.erase(highlighted_objects_.begin());
 
   if(!ptr.expired())
   {

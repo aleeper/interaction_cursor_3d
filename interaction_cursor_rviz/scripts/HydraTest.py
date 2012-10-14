@@ -15,7 +15,7 @@ class InteractionTest(object):
 
   def __init__(self, name):
 
-    self.pub = rospy.Publisher("/rviz/interaction_cursor/update", InteractionCursorUpdate)
+    self.pub = rospy.Publisher("/interaction_cursor/update", InteractionCursorUpdate)
     self.sub = rospy.Subscriber("hydra_calib", Hydra, self.hydraCB)
     
     self.left_down = False
