@@ -158,6 +158,7 @@ public:
       {
         control->setHighlight(InteractiveMarkerControl::HOVER_HIGHLIGHT);
         disp_->highlighted_objects_.insert(ptr);
+        //disp_->grabbed_object_ = ptr;
 
         // returning false means no subsequent object will be checked.
         return false;
@@ -197,10 +198,10 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                                         "interaction_cursor_msgs::InteractionCursorUpdate topic to subscribe to.",
                                                         this, SLOT( changeUpdateTopic() ));
 
-  feedback_topic_property_ = new RosTopicProperty( "Feedback Topic", "/interaction_cursor/feedback",
-                                                        ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorFeedback>(),
-                                                        "interaction_cursor_msgs::InteractionCursorFeedback topic to publish feedback to.",
-                                                        this, SLOT( changeFeedbackTopic() ));
+//  feedback_topic_property_ = new RosTopicProperty( "Feedback Topic", "/interaction_cursor/feedback",
+//                                                        ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorFeedback>(),
+//                                                        "interaction_cursor_msgs::InteractionCursorFeedback topic to publish feedback to.",
+//                                                        this, SLOT( changeFeedbackTopic() ));
 
   show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
                                                  "Enables display of cursor shape.",
@@ -235,16 +236,21 @@ InteractionCursorDisplay::~InteractionCursorDisplay()
 
 void InteractionCursorDisplay::changeUpdateTopic()
 {
+  std::string tmp = update_topic_property_->getStdString();
+
   subscriber_update_ = nh_.subscribe<interaction_cursor_msgs::InteractionCursorUpdate>
-                              (update_topic_property_->getStdString(), 10,
+                              (tmp, 10,
                               boost::bind(&InteractionCursorDisplay::updateCallback, this, _1));
+  tmp.replace(tmp.find("update"), tmp.length(), "feedback");
+  publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
+                              (tmp, 10);
 }
 
-void InteractionCursorDisplay::changeFeedbackTopic()
-{
-  publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
-                              (feedback_topic_property_->getStdString(), 10);
-}
+//void InteractionCursorDisplay::changeFeedbackTopic()
+//{
+//  publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
+//                              (feedback_topic_property_->getStdString(), 10);
+//}
 
 void InteractionCursorDisplay::onInitialize()
 {
@@ -261,7 +267,7 @@ void InteractionCursorDisplay::onInitialize()
 
   // Should this happen onEnable and then get killed later?
   changeUpdateTopic();
-  changeFeedbackTopic();
+  //changeFeedbackTopic();
 }
 
 void InteractionCursorDisplay::onEnable()
@@ -403,9 +409,9 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
       boost::shared_ptr<InteractiveMarkerControl> control;
       InteractiveObjectWPtr ptr;
       getActiveControl(ptr, control);
-      if(control)
-        sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::NONE,
-                                control, position, quaternion);
+      // Doesthe right thing even if control is null
+      sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::NONE,
+                              control, position, quaternion);
     }
     else if(icu_cptr->button_state == icu_cptr->GRAB)
     {
@@ -488,6 +494,7 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
   {
     name = control->getName();
     description = control->getDescription().toStdString();
+    if(description == "") description = "no_frame";
     interaction_mode = control->getInteractionMode();
   }
 
@@ -540,6 +547,8 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
     //ROS_INFO("No control frame detected for control [%s] with description [%s]", name.c_str(), description.c_str());
     interaction_cursor_msgs::InteractionCursorFeedback fb;
     fb.event_type = event_type;
+    // empty string means no marker; "no_frame" means there is a control to frag, but no associated control frame.
+    fb.pose.header.frame_id = description;
     publisher_feedback_.publish(fb);
   }
 }
@@ -547,14 +556,17 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
 void InteractionCursorDisplay::getActiveControl(InteractiveObjectWPtr& ptr, boost::shared_ptr<InteractiveMarkerControl>& control)
 {
   if(!grabbed_object_.expired())
+  {
     ptr = grabbed_object_;
+    //highlighted_objects_.erase(grabbed_object_);
+  }
   else if(highlighted_objects_.begin() == highlighted_objects_.end())
     return;
   else
   {
     ptr = *(highlighted_objects_.begin());
     // Remove the object from the set so that we don't un-highlight it later on accident.
-    highlighted_objects_.erase(highlighted_objects_.begin());
+    //highlighted_objects_.erase(highlighted_objects_.begin());
   }
 
 
@@ -575,6 +587,7 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
     sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::GRABBED,
                             control, position, orientation);
     grabbed_object_ = ptr;
+    highlighted_objects_.erase(grabbed_object_);
     dragging_ = true;
   }
 }
@@ -611,13 +624,13 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
     control->handle3DCursorEvent(event, position, orientation);
     // Add it back to the set for later un-highlighting.
     highlighted_objects_.insert(grabbed_object_);
-    sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::RELEASED,
-                            control, position, orientation);
   }
   else if( dragging_ )
   {
     ROS_WARN("Grabbed object seems to have expired before we released it!");
   }
+  sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::RELEASED,
+                          control, position, orientation);
   grabbed_object_.reset();
   dragging_ = false;
 }

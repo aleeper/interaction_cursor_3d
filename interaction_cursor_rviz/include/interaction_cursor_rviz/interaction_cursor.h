@@ -115,8 +115,8 @@ protected Q_SLOTS:
   /** @brief Update the topic used to subscribe to updates. */
   virtual void changeUpdateTopic();
 
-  /** @brief Update the topic used to publish feedback. */
-  virtual void changeFeedbackTopic();
+//  /** @brief Update the topic used to publish feedback. */
+//  virtual void changeFeedbackTopic();
 
 protected:
 
