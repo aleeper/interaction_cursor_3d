@@ -49,6 +49,7 @@ class BoolProperty;
 class FloatProperty;
 class TfFrameProperty;
 class RosTopicProperty;
+class ColorProperty;
 class MyVisitor;
 class MySceneQueryListener;
 
@@ -132,6 +133,8 @@ protected:
   FloatProperty* axes_length_property_;
   FloatProperty* axes_radius_property_;
   FloatProperty* shape_scale_property_;
+  ColorProperty* shape_color_property_;
+  FloatProperty* shape_alpha_property_;
   //TfFrameProperty* frame_property_;
   RosTopicProperty* update_topic_property_;
   RosTopicProperty* feedback_topic_property_;

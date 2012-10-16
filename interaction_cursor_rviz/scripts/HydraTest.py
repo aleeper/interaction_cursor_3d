@@ -30,7 +30,7 @@ class InteractionTest(object):
 
   def hydraCB(self, msg):
     
-    paddle = msg.paddles[0];
+    paddle = msg.paddles[msg.RIGHT];
 
     icu = InteractionCursorUpdate() 
     icu.pose.pose.position.x = paddle.transform.translation.x

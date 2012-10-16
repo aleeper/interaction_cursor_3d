@@ -40,6 +40,7 @@
 #include "rviz/ogre_helpers/custom_parameter_indices.h"
 #include "rviz/properties/float_property.h"
 #include "rviz/properties/tf_frame_property.h"
+#include "rviz/properties/color_property.h"
 #include "rviz/properties/ros_topic_property.h"
 #include "rviz/view_manager.h"
 
@@ -207,10 +208,20 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                                  "Enables display of cursor shape.",
                                                  this, SLOT( updateShape() ));
 
-  shape_scale_property_ = new FloatProperty( "Cursor Radius", 0.05,
-                                        "Size of search sphere, in meters.",
+  shape_scale_property_ = new FloatProperty( "Cursor Diameter", 0.1,
+                                        "Size of cursor, in meters.",
                                         this, SLOT( updateShape() ));
   shape_scale_property_->setMin( 0.0001 );
+
+  shape_color_property_ = new ColorProperty("Cursor Color", QColor(80, 255, 20),
+                                            "Color of cursor.",
+                                            this, SLOT(updateShape()));
+
+  shape_alpha_property_ = new FloatProperty( "Cursor Alpha", 1.0,
+                                             "Alpha value of cursor.",
+                                             this, SLOT( updateShape()) );
+  shape_alpha_property_->setMin(0.0f);
+  shape_alpha_property_->setMax(1.0f);
 
   show_cursor_axes_property_ = new BoolProperty("Show Axes", true,
                                                 "Enables display of cursor axes.",
@@ -261,9 +272,7 @@ void InteractionCursorDisplay::onInitialize()
   cursor_axes_->getSceneNode()->setVisible( show_cursor_axes_property_->getBool() );
 
   cursor_shape_ = new Shape( Shape::Sphere, context_->getSceneManager(), cursor_node_);
-  cursor_shape_->setScale(Ogre::Vector3(0.2f));
-  cursor_shape_->setColor(0.3f, 1.0f, 0.3f, 0.5f);
-  cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool() );
+  updateShape();
 
   // Should this happen onEnable and then get killed later?
   changeUpdateTopic();
@@ -291,9 +300,12 @@ void InteractionCursorDisplay::updateAxes()
 void InteractionCursorDisplay::updateShape()
 {
   // multiply by 2 because shape_scale sets sphere diameter
-  Ogre::Vector3 shape_scale( 2*1.02*shape_scale_property_->getFloat());
+  Ogre::Vector3 shape_scale( 1.02*shape_scale_property_->getFloat());
   cursor_shape_->setScale( shape_scale );
   cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool(), true );
+  Ogre::ColourValue color = shape_color_property_->getOgreColor();
+  color.a = shape_alpha_property_->getFloat();
+  cursor_shape_->setColor(color);
   context_->queueRender();
 }
 
@@ -396,7 +408,7 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     //context_->getViewManager()->getCurrent();
 
 
-    Ogre::Sphere sphere(position, shape_scale_property_->getFloat());
+    Ogre::Sphere sphere(position, shape_scale_property_->getFloat()/2.0);
     clearOldSelections();
 
     // Fake some keyboard events for menu navigation
@@ -409,7 +421,7 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
       boost::shared_ptr<InteractiveMarkerControl> control;
       InteractiveObjectWPtr ptr;
       getActiveControl(ptr, control);
-      // Doesthe right thing even if control is null
+      // Does the right thing even if control is null
       sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::NONE,
                               control, position, quaternion);
     }
@@ -488,22 +500,45 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
                                                        const Ogre::Vector3& cursor_pos,
                                                        const Ogre::Quaternion& cursor_rot)
 {
-  std::string name = "", description = "";
+  std::string code_string = "control_frame: ";
+  std::string name = "", description = "", frame = "";
   int interaction_mode = 0;
-  if(control)
+  if(!control)
   {
+    //ROS_INFO("No control detected.");
+    interaction_cursor_msgs::InteractionCursorFeedback fb;
+    fb.event_type = event_type;
+    // empty string means no interactive marker.
+    fb.pose.header.frame_id = "";
+    publisher_feedback_.publish(fb);
+    return;
+  }
+  else //control
+  {
+    interaction_mode = control->getInteractionMode();
     name = control->getName();
     description = control->getDescription().toStdString();
-    if(description == "") description = "no_frame";
-    interaction_mode = control->getInteractionMode();
+    if(description == "")
+    {
+      frame = "no_frame";
+    }
+    else
+    {
+      frame = description;
+      if(frame.find(code_string) != std::string::npos)
+      {
+        frame.replace(0, code_string.length(), "" );
+      }
+      else
+      {
+        frame = "no_frame";
+      }
+    }
   }
 
-  std::string code_string = "control_frame: ";
-  if( description.find(code_string) != std::string::npos
+  if( (frame != "" && frame != "no_frame")
      && (event_type == interaction_cursor_msgs::InteractionCursorFeedback::NONE || event_type == interaction_cursor_msgs::InteractionCursorFeedback::GRABBED ))
   {
-    std::string frame = description;
-    frame.replace(0, code_string.length(), "" );
 
     // Extract frame and compute pose for the grabbed marker
     interaction_cursor_msgs::InteractionCursorFeedback fb;
@@ -511,9 +546,13 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
     if(interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_AXIS
        || interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_PLANE
        || interaction_mode == visualization_msgs::InteractiveMarkerControl::ROTATE_AXIS)
+    {
       fb.attachment_type = fb.POSITION;
+    }
     else if(interaction_mode == visualization_msgs::InteractiveMarkerControl::MOVE_ROTATE)
+    {
       fb.attachment_type = fb.POSITION_AND_ORIENTATION;
+    }
 
     Ogre::Vector3 pos_world_to_control;
     Ogre::Quaternion rot_world_to_control;
@@ -532,14 +571,15 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
       std::string error;
       if( context_->getFrameManager()->transformHasProblems( frame, ros::Time(), error ))
       {
-        setStatus( StatusProperty::Error, "Transform", QString::fromStdString( error ));
+        ROS_ERROR_STREAM( error );
       }
       else
       {
-        setStatus( StatusProperty::Error,
-                   "Transform",
-                   "Could not transform from [" + QString::fromStdString(frame) + "] to Fixed Frame [" + fixed_frame_ + "] for an unknown reason" );
+        ROS_ERROR_STREAM("Could not transform from [" + frame + "] to Fixed Frame [" + fixed_frame_.toStdString() + "] for an unknown reason" );
       }
+      fb.pose.header.frame_id = "no_frame";
+      fb.attachment_type = fb.NONE;
+      publisher_feedback_.publish(fb);
     }
   }
   else // No control frame detected
@@ -548,7 +588,7 @@ void InteractionCursorDisplay::sendInteractionFeedback(uint8_t event_type,
     interaction_cursor_msgs::InteractionCursorFeedback fb;
     fb.event_type = event_type;
     // empty string means no marker; "no_frame" means there is a control to frag, but no associated control frame.
-    fb.pose.header.frame_id = description;
+    fb.pose.header.frame_id = frame;
     publisher_feedback_.publish(fb);
   }
 }
