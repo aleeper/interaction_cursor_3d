@@ -15,7 +15,7 @@ class InteractionTest(object):
 
   def __init__(self, name):
 
-    self.pub = rospy.Publisher("/interaction_cursor/update", InteractionCursorUpdate)
+    self.pub = rospy.Publisher("/interaction_cursor_right/update", InteractionCursorUpdate)
     self.sub = rospy.Subscriber("hydra_calib", Hydra, self.hydraCB)
     
     self.left_down = False
@@ -33,7 +33,7 @@ class InteractionTest(object):
     paddle = msg.paddles[msg.RIGHT];
 
     icu = InteractionCursorUpdate() 
-    icu.pose.pose.position.x = paddle.transform.translation.x
+    icu.pose.pose.position.x = paddle.transform.translation.x + 0.2
     icu.pose.pose.position.y = paddle.transform.translation.y
     icu.pose.pose.position.z = paddle.transform.translation.z
 

@@ -43,6 +43,7 @@
 #include "rviz/properties/color_property.h"
 #include "rviz/properties/ros_topic_property.h"
 #include "rviz/view_manager.h"
+#include "rviz/msg_conversions.h"
 
 #include "rviz/selection/forwards.h"
 #include "rviz/selection/selection_handler.h"
@@ -62,52 +63,8 @@
 
 using namespace interaction_cursor_msgs;
 
-
-#if( OGRE_VERSION_MINOR < 8 )
-// TODO This is a TERRIBLE work around to add this function to Ogre versions before 1.8.
-namespace Ogre {
-class MyRenderable : public Renderable
-{
-public:
-  MyRenderable() : Renderable() {}
-  ~MyRenderable() {}
-  bool hasCustomParameter(size_t index) const
-  {
-    return mCustomParameters.find(index) != mCustomParameters.end();
-  }
-};
-}
-#endif
-
 namespace rviz
 {
-
-// Some convenience functions for Ogre / geometry_msgs conversions
-static inline Ogre::Vector3 vectorFromMsg(const geometry_msgs::Point &m) { return Ogre::Vector3(m.x, m.y, m.z); }
-static inline Ogre::Vector3 vectorFromMsg(const geometry_msgs::Vector3 &m) { return Ogre::Vector3(m.x, m.y, m.z); }
-static inline geometry_msgs::Point pointOgreToMsg(const Ogre::Vector3 &o)
-{
-  geometry_msgs::Point m;
-  m.x = o.x; m.y = o.y; m.z = o.z;
-  return m;
-}
-static inline void pointOgreToMsg(const Ogre::Vector3 &o, geometry_msgs::Point &m)  { m.x = o.x; m.y = o.y; m.z = o.z; }
-
-static inline geometry_msgs::Vector3 vectorOgreToMsg(const Ogre::Vector3 &o)
-{
-  geometry_msgs::Vector3 m;
-  m.x = o.x; m.y = o.y; m.z = o.z;
-  return m;
-}
-static inline void vectorOgreToMsg(const Ogre::Vector3 &o, geometry_msgs::Vector3 &m) { m.x = o.x; m.y = o.y; m.z = o.z; }
-
-static inline geometry_msgs::Quaternion quaternionOgreToMsg(const Ogre::Quaternion &o)
-{
-  geometry_msgs::Quaternion m;
-  m.w = o.w; m.x = o.x; m.y = o.y; m.z = o.z;
-  return m;
-}
-static inline void quaternionOgreToMsg(const Ogre::Quaternion &o, geometry_msgs::Quaternion &m)  { m.w = o.w; m.x = o.x; m.y = o.y; m.z = o.z; }
 
 /** This class is needed to process scene query results. */
 class MySceneQueryListener : public Ogre::SceneQueryListener
@@ -168,19 +125,18 @@ public:
     return true;
   }
 
-
-    /** Called when a WorldFragment is returned by a query.
-    @remarks
-        The implementor should return 'true' to continue returning objects,
-        or 'false' to abandon any further results from this query.
-    */
-    virtual bool queryResult(Ogre::SceneQuery::WorldFragment* fragment)
-    {
-      //ROS_INFO("Sphere collides with WorldFragment type [%d].", fragment->fragmentType );
-      return true;
-    }
-    rviz::InteractionCursorDisplay* disp_;
-    Ogre::Sphere query_sphere_;
+  /** Called when a WorldFragment is returned by a query.
+  @remarks
+      The implementor should return 'true' to continue returning objects,
+      or 'false' to abandon any further results from this query.
+  */
+  virtual bool queryResult(Ogre::SceneQuery::WorldFragment* fragment)
+  {
+    //ROS_INFO("Sphere collides with WorldFragment type [%d].", fragment->fragmentType );
+    return true;
+  }
+  rviz::InteractionCursorDisplay* disp_;
+  Ogre::Sphere query_sphere_;
 };
 
 // -----------------------------------------------------------------------------
@@ -256,12 +212,6 @@ void InteractionCursorDisplay::changeUpdateTopic()
   publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
                               (tmp, 10);
 }
-
-//void InteractionCursorDisplay::changeFeedbackTopic()
-//{
-//  publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
-//                              (feedback_topic_property_->getStdString(), 10);
-//}
 
 void InteractionCursorDisplay::onInitialize()
 {
@@ -623,6 +573,7 @@ void InteractionCursorDisplay::grabObject(const Ogre::Vector3 &position, const O
   getActiveControl(ptr, control);
   if(control)
   {
+    ROS_DEBUG("Grabbing object [%s]", control->getName().c_str());
     control->handle3DCursorEvent(event, position, orientation);
     sendInteractionFeedback(interaction_cursor_msgs::InteractionCursorFeedback::GRABBED,
                             control, position, orientation);
@@ -660,7 +611,7 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
   getActiveControl(ptr, control);
   if(dragging_ && control)
   {
-    ROS_INFO("Releasing object [%s]", control->getName().c_str());
+    ROS_DEBUG("Releasing object [%s]", control->getName().c_str());
     control->handle3DCursorEvent(event, position, orientation);
     // Add it back to the set for later un-highlighting.
     highlighted_objects_.insert(grabbed_object_);
