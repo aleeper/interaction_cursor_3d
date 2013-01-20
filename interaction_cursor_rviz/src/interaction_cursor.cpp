@@ -652,7 +652,7 @@ void InteractionCursorDisplay::update( float dt, float ros_dt )
 
 #include <pluginlib/class_list_macros.h>
 // namespace, name, type, base type
-PLUGINLIB_DECLARE_CLASS( rviz, InteractionCursorDisplay, rviz::InteractionCursorDisplay, rviz::Display )
+PLUGINLIB_EXPORT_CLASS( rviz::InteractionCursorDisplay, rviz::Display )
 
 
 
