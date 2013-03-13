@@ -236,7 +236,8 @@ void InteractionCursorDisplay::onEnable()
 
 void InteractionCursorDisplay::onDisable()
 {
-  cursor_node_->setVisible( false );
+  cursor_node_->setVisible( false, true );
+  // TODO unsubscribe from update topic?
 }
 
 void InteractionCursorDisplay::updateAxes()
@@ -343,6 +344,9 @@ void InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
 {
+  if( !this->isEnabled() )
+    return;
+
   std::string frame = icu_cptr->pose.header.frame_id;
   Ogre::Vector3 position;
   Ogre::Quaternion quaternion;
