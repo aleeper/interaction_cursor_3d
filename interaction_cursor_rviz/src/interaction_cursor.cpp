@@ -155,14 +155,23 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                                         "interaction_cursor_msgs::InteractionCursorUpdate topic to subscribe to.",
                                                         this, SLOT( changeUpdateTopic() ));
 
-//  feedback_topic_property_ = new RosTopicProperty( "Feedback Topic", "/interaction_cursor/feedback",
-//                                                        ros::message_traits::datatype<interaction_cursor_msgs::InteractionCursorFeedback>(),
-//                                                        "interaction_cursor_msgs::InteractionCursorFeedback topic to publish feedback to.",
-//                                                        this, SLOT( changeFeedbackTopic() ));
-
   show_cursor_shape_property_ = new BoolProperty("Show Cursor", true,
                                                  "Enables display of cursor shape.",
                                                  this, SLOT( updateShape() ));
+
+  show_cursor_axes_property_ = new BoolProperty("Show Axes", true,
+                                                "Enables display of cursor axes.",
+                                                this, SLOT( updateAxes()));
+
+  axes_length_property_ = new FloatProperty( "Axes Length", 0.1,
+                                        "Length of each axis, in meters.",
+                                        this, SLOT( updateAxes() ));
+  axes_length_property_->setMin( 0.0001 );
+
+  axes_radius_property_ = new FloatProperty( "Axes Radius", 0.01,
+                                        "Radius of each axis, in meters.",
+                                        this, SLOT( updateAxes() ));
+  axes_radius_property_->setMin( 0.0001 );
 
   shape_scale_property_ = new FloatProperty( "Cursor Diameter", 0.1,
                                         "Size of cursor, in meters.",
@@ -178,20 +187,6 @@ InteractionCursorDisplay::InteractionCursorDisplay()
                                              this, SLOT( updateShape()) );
   shape_alpha_property_->setMin(0.0f);
   shape_alpha_property_->setMax(1.0f);
-
-  show_cursor_axes_property_ = new BoolProperty("Show Axes", true,
-                                                "Enables display of cursor axes.",
-                                                this, SLOT( updateAxes()));
-
-  axes_length_property_ = new FloatProperty( "Axes Length", 0.1,
-                                        "Length of each axis, in meters.",
-                                        this, SLOT( updateAxes() ));
-  axes_length_property_->setMin( 0.0001 );
-
-  axes_radius_property_ = new FloatProperty( "Axes Radius", 0.01,
-                                        "Radius of each axis, in meters.",
-                                        this, SLOT( updateAxes() ));
-  axes_radius_property_->setMin( 0.0001 );
 }
 
 InteractionCursorDisplay::~InteractionCursorDisplay()
@@ -206,11 +201,11 @@ void InteractionCursorDisplay::changeUpdateTopic()
   std::string tmp = update_topic_property_->getStdString();
 
   subscriber_update_ = nh_.subscribe<interaction_cursor_msgs::InteractionCursorUpdate>
-                              (tmp, 10,
+                              (tmp, 30,
                               boost::bind(&InteractionCursorDisplay::updateCallback, this, _1));
   tmp.replace(tmp.find("update"), tmp.length(), "feedback");
   publisher_feedback_ = nh_.advertise<interaction_cursor_msgs::InteractionCursorFeedback>
-                              (tmp, 10);
+                              (tmp, 30);
 }
 
 void InteractionCursorDisplay::onInitialize()
@@ -225,19 +220,21 @@ void InteractionCursorDisplay::onInitialize()
   updateShape();
 
   // Should this happen onEnable and then get killed later?
-  changeUpdateTopic();
+
   //changeFeedbackTopic();
 }
 
 void InteractionCursorDisplay::onEnable()
 {
   cursor_node_->setVisible( true );
+  changeUpdateTopic();
 }
 
 void InteractionCursorDisplay::onDisable()
 {
   cursor_node_->setVisible( false, true );
   // TODO unsubscribe from update topic?
+  subscriber_update_.shutdown();
 }
 
 void InteractionCursorDisplay::updateAxes()
@@ -251,7 +248,7 @@ void InteractionCursorDisplay::updateAxes()
 void InteractionCursorDisplay::updateShape()
 {
   // multiply by 2 because shape_scale sets sphere diameter
-  Ogre::Vector3 shape_scale( 1.02*shape_scale_property_->getFloat());
+  Ogre::Vector3 shape_scale( 1.01*shape_scale_property_->getFloat());
   cursor_shape_->setScale( shape_scale );
   cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool(), true );
   Ogre::ColourValue color = shape_color_property_->getOgreColor();
@@ -300,44 +297,49 @@ void InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
 
   switch(key_event)
   {
-  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_UP):
-    ROS_INFO("Trying to set an KEY_UP event...");
-    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
-    break;
-  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_DOWN):
-    ROS_INFO("Trying to set an KEY_DOWN event...");
-    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
-    break;
-  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_LEFT):
-    ROS_INFO("Trying to set an KEY_LEFT event...");
-    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
-    break;
-  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_RIGHT):
-    ROS_INFO("Trying to set an KEY_RIGHT event...");
-    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
-    break;
-  case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ENTER):
-    ROS_INFO("Trying to set an KEY_ENTER event...");
-    event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
-    break;
-  default:
-    break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_UP):
+      ROS_DEBUG("Posting a KEY_UP event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+      break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_DOWN):
+      ROS_DEBUG("Posting a KEY_DOWN event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+      break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_LEFT):
+      ROS_DEBUG("Posting a KEY_LEFT event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+      break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_RIGHT):
+      ROS_DEBUG("Posting a KEY_RIGHT event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+      break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ENTER):
+      ROS_DEBUG("Posting a KEY_ENTER event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
+      break;
+    case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ESCAPE):
+      ROS_DEBUG("Posting a KEY_ESCAPE event...");
+      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+      break;
+    default:
+      break;
   }
 
-  if (event)
+  if (event) // Try to post the key event to the QMainWindow...
   {
-      QObject* obj = this;
-      while(obj)
-      {
-        if(obj->parent())
-          obj = obj->parent();
-        else
-          break;
-      }
-      ROS_INFO("posting...");
-      // Hopefully now obj points to the QMainWindow...
-      QApplication::postEvent(obj, event);
-      //emit signalKeyPress(emitKey);
+    // Works, but sort of hacky
+    QWidget* receiver = QApplication::widgetAt(QCursor::pos());
+
+    /* //Doesn't work
+    QWidget* focus = QApplication::focusWidget();
+    //Also doesn't work
+    QObject* obj = this;
+    while(obj && obj->parent())
+        obj = obj->parent();
+    //These all point to different objects, it seems.
+    ROS_INFO("obj [%d], focusWidget [%d], receiver [%d]", obj, focus, receiver); */
+
+    QApplication::postEvent(receiver, event);
   }
 
 }
@@ -632,6 +634,7 @@ void InteractionCursorDisplay::releaseObject(const Ogre::Vector3 &position, cons
 
 void InteractionCursorDisplay::requestMenu(const Ogre::Vector3 &position, const Ogre::Quaternion &orientation, const rviz::ViewportMouseEvent &event)
 {
+  ROS_DEBUG("Requesting a menu");
   if(highlighted_objects_.begin() == highlighted_objects_.end())
     return;
   InteractiveObjectWPtr ptr = *(highlighted_objects_.begin());

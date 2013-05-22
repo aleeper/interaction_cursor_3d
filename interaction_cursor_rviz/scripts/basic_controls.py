@@ -225,6 +225,7 @@ def make6DofMarker( fixed, interaction_mode):
     int_marker.controls.append(control)
 
     server.insert(int_marker, processFeedback)
+    menu_handler.apply( server, int_marker.name )
 
 def makeRandomDofMarker():
     global marker_pos_y
@@ -442,6 +443,7 @@ if __name__=="__main__":
     menu_handler.insert( "First Entry", parent=sub_menu_handle, callback=processFeedback )
     menu_handler.insert( "Second Entry", parent=sub_menu_handle, callback=processFeedback )
 
+    makeMenuMarker( )
     make6DofMarker( False, InteractiveMarkerControl.NONE )
     make6DofMarker( True, InteractiveMarkerControl.NONE )
     makeRandomDofMarker( )
@@ -449,7 +451,6 @@ if __name__=="__main__":
     makeQuadrocopterMarker( )
     makeChessPieceMarker( )
     makePanTiltMarker( )
-    makeMenuMarker( )
     makeMovingMarker( )
 
     #global marker_pos_y

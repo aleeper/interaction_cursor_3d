@@ -4,7 +4,7 @@ project(interaction_cursor_msgs)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS genmsg geometry_msgs std_msgs)
+find_package(catkin REQUIRED COMPONENTS genmsg geometry_msgs std_msgs visualization_msgs)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -36,6 +36,7 @@ find_package(catkin REQUIRED COMPONENTS genmsg geometry_msgs std_msgs)
    DEPENDENCIES
    geometry_msgs
    std_msgs
+   visualization_msgs
  )
 
 ###################################################
