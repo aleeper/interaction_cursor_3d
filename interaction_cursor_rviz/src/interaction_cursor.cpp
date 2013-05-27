@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Willow Garage, Inc.
+ * Copyright (c) 2012, Willow Garage, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
+/* Author: Adam Leeper */
 
 #include "interaction_cursor_rviz/interaction_cursor.h"
 #include "interaction_cursor_msgs/InteractionCursorUpdate.h"
@@ -58,6 +60,7 @@
 #include <OGRE/OgreRenderWindow.h>
 
 #include <QApplication>
+#include <QMenu>
 
 #include <boost/bind.hpp>
 
@@ -89,6 +92,8 @@ public:
 
 
     // If we got to here, we are assuming that we have satisfactory intersection.
+    // TODO it would be better if we could keep a list of all intersecting objects, and then keep the smallest
+    // one or something...
     //ROS_INFO("Sphere collides with MoveableObject [%s].",  object->getName().c_str());
 
     // The new rviz change adds a user object binding called "pick_handle" to objects when the pick color is set.
@@ -233,7 +238,6 @@ void InteractionCursorDisplay::onEnable()
 void InteractionCursorDisplay::onDisable()
 {
   cursor_node_->setVisible( false, true );
-  // TODO unsubscribe from update topic?
   subscriber_update_.shutdown();
 }
 
@@ -247,7 +251,6 @@ void InteractionCursorDisplay::updateAxes()
 
 void InteractionCursorDisplay::updateShape()
 {
-  // multiply by 2 because shape_scale sets sphere diameter
   Ogre::Vector3 shape_scale( 1.01*shape_scale_property_->getFloat());
   cursor_shape_->setScale( shape_scale );
   cursor_shape_->getRootNode()->setVisible( show_cursor_shape_property_->getBool(), true );
@@ -291,57 +294,73 @@ ViewportMouseEvent InteractionCursorDisplay::createMouseEvent(uint8_t button_sta
   return event;
 }
 
-void InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
+bool InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
 {
   QKeyEvent *event = 0;
+  QKeyEvent *event2 = 0;
 
   switch(key_event)
   {
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_UP):
       ROS_DEBUG("Posting a KEY_UP event...");
-      event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+      event =  new QKeyEvent(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Up, Qt::NoModifier);
       break;
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_DOWN):
       ROS_DEBUG("Posting a KEY_DOWN event...");
       event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Down, Qt::NoModifier);
       break;
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_LEFT):
       ROS_DEBUG("Posting a KEY_LEFT event...");
       event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Left, Qt::NoModifier);
       break;
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_RIGHT):
       ROS_DEBUG("Posting a KEY_RIGHT event...");
       event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Right, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Right, Qt::NoModifier);
       break;
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ENTER):
       ROS_DEBUG("Posting a KEY_ENTER event...");
       event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Enter, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Enter, Qt::NoModifier);
       break;
     case (interaction_cursor_msgs::InteractionCursorUpdate::KEY_ESCAPE):
       ROS_DEBUG("Posting a KEY_ESCAPE event...");
       event = new QKeyEvent(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+      event2 = new QKeyEvent(QEvent::KeyRelease, Qt::Key_Escape, Qt::NoModifier);
       break;
     default:
       break;
   }
 
-  if (event) // Try to post the key event to the QMainWindow...
+  if (event && event2)
   {
-    // Works, but sort of hacky
-    QWidget* receiver = QApplication::widgetAt(QCursor::pos());
+    if(current_menu_ && current_menu_->isVisible())
+    {
+      QWidget* receiver = current_submenu_ ? current_submenu_ : current_menu_;
 
-    /* //Doesn't work
-    QWidget* focus = QApplication::focusWidget();
-    //Also doesn't work
-    QObject* obj = this;
-    while(obj && obj->parent())
-        obj = obj->parent();
-    //These all point to different objects, it seems.
-    ROS_INFO("obj [%d], focusWidget [%d], receiver [%d]", obj, focus, receiver); */
+      if ( (event->key() == Qt::Key_Right || event->key() == Qt::Key_Enter)
+           && current_menu_->activeAction() && current_menu_->activeAction()->menu())
+      {
+        current_submenu_ = current_menu_->activeAction()->menu();
+      }
+      else if ( event->key() == Qt::Key_Left )
+      {
+        current_submenu_ = 0;
+      }
 
-    QApplication::postEvent(receiver, event);
+      QApplication::postEvent(receiver, event);
+      QApplication::postEvent(receiver, event2);
+    }
+    else
+      current_menu_ = current_submenu_ = 0;
+
+    return true;
   }
 
+  return false;
 }
 
 void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr)
@@ -359,19 +378,16 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     cursor_node_->setOrientation( quaternion );
     updateShape();
 
-    // Moving view controller:
-    // could get and then set to force a certain type
-    //context_->getViewManager()->getCurrent();
-
-
     Ogre::Sphere sphere(position, shape_scale_property_->getFloat()/2.0);
     clearOldSelections();
 
-    // Fake some keyboard events for menu navigation
-    // TODO doesn't work yet...
-    generateKeyEvent(icu_cptr->key_event);
-
-    if(icu_cptr->button_state == icu_cptr->NONE)
+    if(icu_cptr->key_event != icu_cptr->NONE)  // Fake some keyboard events for menu navigation
+    {
+      getIntersections(sphere);
+      generateKeyEvent(icu_cptr->key_event);
+      return;
+    }
+    else if(icu_cptr->button_state == icu_cptr->NONE)
     {
       getIntersections(sphere);
       boost::shared_ptr<InteractiveMarkerControl> control;
@@ -398,9 +414,6 @@ void InteractionCursorDisplay::updateCallback(const interaction_cursor_msgs::Int
     {
       getIntersections(sphere);
       requestMenu(position, quaternion, createMouseEvent(icu_cptr->button_state));
-      // TODO fix location of screen popups
-      // TODO add support for cursor up/down events
-
     }
     context_->queueRender();
 
@@ -644,7 +657,13 @@ void InteractionCursorDisplay::requestMenu(const Ogre::Vector3 &position, const 
     if(control)
     {
       control->handle3DCursorEvent(event, position, orientation);
+      current_menu_ = control->getParent()->getMenu().get();
+      current_submenu_ = 0;
     }
+  }
+  else
+  {
+    current_menu_ = current_submenu_ = 0;
   }
 }
 

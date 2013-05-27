@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, Willow Garage, Inc.
+ * Copyright (c) 2012, Willow Garage, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,6 +27,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+/* Author: Adam Leeper */
+
 #ifndef RVIZ_INTERACTION_CURSOR_DISPLAY_H
 #define RVIZ_INTERACTION_CURSOR_DISPLAY_H
 
@@ -38,6 +40,9 @@
 
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
+
+#include <QMenu>
+#include <QAction>
 
 
 namespace rviz
@@ -84,6 +89,7 @@ protected:
   virtual void onEnable();
   virtual void onDisable();
 
+  // This is the main callback function that processes new interaction cursor messages.
   void updateCallback(const interaction_cursor_msgs::InteractionCursorUpdateConstPtr &icu_cptr);
 
   void getIntersections(const Ogre::Sphere &sphere);
@@ -92,7 +98,8 @@ protected:
 
   rviz::ViewportMouseEvent createMouseEvent(uint8_t button_state);
 
-  void generateKeyEvent(uint8_t key_event);
+  // Return true if key event was posted
+  bool generateKeyEvent(uint8_t key_event);
 
   void sendInteractionFeedback(uint8_t event_type,
                                const boost::shared_ptr<InteractiveMarkerControl>& control,
@@ -147,6 +154,8 @@ protected:
   Ogre::Vector3 position_offset_at_grab_;
   Ogre::Quaternion orientation_offset_at_grab_;
   std::string marker_frame_at_grab_;
+  QMenu* current_menu_;
+  QMenu* current_submenu_;
 
 };
 
