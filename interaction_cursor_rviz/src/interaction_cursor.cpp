@@ -152,6 +152,8 @@ InteractionCursorDisplay::InteractionCursorDisplay()
   , nh_("")
   , cursor_shape_(0)
   , dragging_(false)
+  , current_menu_(0)
+  , current_submenu_(0)
 {
   grabbed_object_.reset();
 
@@ -347,6 +349,10 @@ bool InteractionCursorDisplay::generateKeyEvent(uint8_t key_event)
         current_submenu_ = current_menu_->activeAction()->menu();
       }
       else if ( event->key() == Qt::Key_Left )
+      {
+        current_submenu_ = 0;
+      }
+      else if ( event->key() == Qt::Key_Escape)
       {
         current_submenu_ = 0;
       }
