@@ -1,0 +1,15 @@
+<launch>
+
+  <arg name="debug" default="false" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+  <arg     if="$(arg debug)" name="launch_prefix" value="gdb --ex run --args" />
+  <arg name="load_config" default="true" />
+  
+  <arg unless="$(arg load_config)" name="command_args" value="" />
+  <arg if="$(arg load_config)"     name="command_args" value="-d $(find interaction_cursor_demo)/config/interaction_demo.rviz" />
+  
+  <node name="$(anon rviz)" launch-prefix="$(arg launch_prefix)" pkg="rviz" type="rviz" required="true" 
+        respawn="false" output="screen" args="$(arg command_args)">
+  </node>
+
+</launch>

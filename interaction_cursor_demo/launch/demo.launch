@@ -1,0 +1,13 @@
+<launch>
+
+
+  <include file="$(find interaction_cursor_demo)/launch/user_test.launch" >
+    <arg name="radius" value="4.0" />
+  </include>
+
+  <include file="$(find interaction_cursor_demo)/launch/rviz.launch" >
+  </include>
+
+  <node name="basic_controls" type="basic_controls" pkg="interactive_marker_tutorials" />
+
+</launch>
