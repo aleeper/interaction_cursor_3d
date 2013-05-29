@@ -1,6 +1,6 @@
 
 
-#include <cat_user_entity/manipulator_node.h>
+#include <interaction_cursor_demo/manipulator_node.h>
 
 namespace something{
 

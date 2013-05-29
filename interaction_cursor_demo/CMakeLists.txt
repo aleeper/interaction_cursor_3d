@@ -25,7 +25,7 @@ find_package(Eigen REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
    INCLUDE_DIRS src
-   LIBRARIES cat_user_entity
+   LIBRARIES interaction_cursor_demo
    CATKIN_DEPENDS geometry_msgs interaction_cursor_msgs razer_hydra roscpp std_msgs tf
 )
 

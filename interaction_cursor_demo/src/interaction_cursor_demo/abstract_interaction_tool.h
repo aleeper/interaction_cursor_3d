@@ -2,8 +2,8 @@
 #define _CAT_ABSTRACT_INTERACTION_TOOL_H_
 
 
-#include <cat_user_entity/tf_scenegraph_object.h>
-#include <cat_user_entity/abstract_handle.h>
+#include <interaction_cursor_demo/tf_scenegraph_object.h>
+#include <interaction_cursor_demo/abstract_handle.h>
 #include <interaction_cursor_msgs/InteractionCursorUpdate.h>
 #include <interaction_cursor_msgs/InteractionCursorFeedback.h>
 

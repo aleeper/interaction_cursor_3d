@@ -2,7 +2,7 @@
 #define _CAT_CAMERA_NODE_H_
 
 
-#include <cat_user_entity/tf_scenegraph_object.h>
+#include <interaction_cursor_demo/tf_scenegraph_object.h>
 #include <eigen3/Eigen/Geometry>
 
 

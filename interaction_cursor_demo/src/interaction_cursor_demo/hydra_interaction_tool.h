@@ -1,7 +1,7 @@
 #ifndef _CAT_HYDRA_INTERACTION_TOOL_H_
 #define _CAT_HYDRA_INTERACTION_TOOL_H_
 
-#include <cat_user_entity/abstract_interaction_tool.h>
+#include <interaction_cursor_demo/abstract_interaction_tool.h>
 #include <razer_hydra/Hydra.h>
 #include <ros/ros.h>
 

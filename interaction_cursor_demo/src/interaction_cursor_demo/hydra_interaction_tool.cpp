@@ -1,5 +1,5 @@
 
-#include <cat_user_entity/hydra_interaction_tool.h>
+#include <interaction_cursor_demo/hydra_interaction_tool.h>
 #include <razer_hydra/Hydra.h>
 
 #include <tf/tf.h>

@@ -1,5 +1,5 @@
 
-#include <cat_user_entity/user_entity.h>
+#include <interaction_cursor_demo/user_entity.h>
 
 #include <interaction_cursor_msgs/InteractionCursorUpdate.h>
 #include <interaction_cursor_msgs/InteractionCursorFeedback.h>

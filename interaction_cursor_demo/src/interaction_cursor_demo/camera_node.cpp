@@ -1,6 +1,6 @@
 
 
-#include <cat_user_entity/camera_node.h>
+#include <interaction_cursor_demo/camera_node.h>
 
 namespace something {
 

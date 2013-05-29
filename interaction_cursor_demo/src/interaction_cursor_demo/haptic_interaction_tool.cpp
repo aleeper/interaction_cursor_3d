@@ -1,5 +1,5 @@
 
-#include <cat_user_entity/haptic_interaction_tool.h>
+#include <interaction_cursor_demo/haptic_interaction_tool.h>
 #include <chai3d_conversions/tf_chai.h>
 
 #include <tf/tf.h>

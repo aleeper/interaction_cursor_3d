@@ -2,10 +2,10 @@
 #ifndef _CAT_MANIPULATOR_NODE_H_
 #define _CAT_MANIPULATOR_NODE_H_
 
-#include <cat_user_entity/abstract_interaction_tool.h>
-//#include <cat_user_entity/haptic_interaction_tool.h>
-#include <cat_user_entity/hydra_interaction_tool.h>
-#include <cat_user_entity/tf_scenegraph_object.h>
+#include <interaction_cursor_demo/abstract_interaction_tool.h>
+//#include <interaction_cursor_demo/haptic_interaction_tool.h>
+#include <interaction_cursor_demo/hydra_interaction_tool.h>
+#include <interaction_cursor_demo/tf_scenegraph_object.h>
 
 #include <eigen3/Eigen/Geometry>
 

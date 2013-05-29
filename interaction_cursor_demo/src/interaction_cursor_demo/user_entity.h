@@ -1,9 +1,9 @@
 #ifndef _CAT_USER_ENTITY_H_
 #define _CAT_USER_ENTITY_H_
 
-#include <cat_user_entity/tf_scenegraph_object.h>
-#include <cat_user_entity/camera_node.h>
-#include <cat_user_entity/manipulator_node.h>
+#include <interaction_cursor_demo/tf_scenegraph_object.h>
+#include <interaction_cursor_demo/camera_node.h>
+#include <interaction_cursor_demo/manipulator_node.h>
 
 #include <ros/ros.h>
 #include <eigen3/Eigen/Geometry>
