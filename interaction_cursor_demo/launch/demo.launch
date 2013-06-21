@@ -1,8 +1,11 @@
 <launch>
 
+  <arg name="start_hydra" default="true" />
+  <arg name="radius" default="4.0" />
 
   <include file="$(find interaction_cursor_demo)/launch/user_test.launch" >
-    <arg name="radius" value="4.0" />
+    <arg name="radius" value="$(arg radius)" />
+    <arg name="start_hydra" value="$(arg start_hydra)" />
   </include>
 
   <include file="$(find interaction_cursor_demo)/launch/rviz.launch" >
