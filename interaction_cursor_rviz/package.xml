@@ -25,7 +25,7 @@
 
   <export>
 
-    <rviz plugin="${prefix}/lib/interaction_cursor_rviz_plugin_description.xml"/>
+    <rviz plugin="${prefix}/interaction_cursor_rviz_plugin_description.xml"/>
 
   </export>
 
