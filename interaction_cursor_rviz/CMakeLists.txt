@@ -40,7 +40,6 @@ catkin_package(
   INCLUDE_DIRS include
   LIBRARIES interaction_cursor_rviz
   CATKIN_DEPENDS geometry_msgs interaction_cursor_msgs rviz
-#  DEPENDS system_lib
 )
 
 ###########
@@ -80,14 +79,11 @@ target_link_libraries(interaction_cursor_rviz ${catkin_LIBRARIES} ${OGRE_LIBRARI
 ## Install ##
 #############
 
+install(TARGETS interaction_cursor_rviz LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
-install(FILES
-   lib/plugin_description.xml
-   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
- )
+install(FILES  lib/interaction_cursor_rviz_plugin_description.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-install(TARGETS interaction_cursor_rviz LIBRARY DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)
 
 
