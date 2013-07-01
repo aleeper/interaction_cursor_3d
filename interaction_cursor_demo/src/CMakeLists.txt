@@ -1,22 +1,19 @@
 add_subdirectory(interaction_cursor_demo)
 include_directories(.)
 
-add_executable(user_test
+add_executable(interaction_cursor_demo_node
                main.cpp
 )
-add_dependencies(user_test ${PROJECT_NAME})
+add_dependencies(interaction_cursor_demo_node ${PROJECT_NAME})
 
-target_link_libraries(user_test
+target_link_libraries(interaction_cursor_demo_node
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
 
-install(DIRECTORY ./
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h")
 
 
-install(TARGETS user_test
+install(TARGETS interaction_cursor_demo_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
