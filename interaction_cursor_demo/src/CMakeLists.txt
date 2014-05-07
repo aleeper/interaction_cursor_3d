@@ -1,5 +1,4 @@
 add_subdirectory(interaction_cursor_demo)
-include_directories(.)
 
 add_executable(interaction_cursor_demo_node
                main.cpp

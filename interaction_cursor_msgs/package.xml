@@ -2,7 +2,12 @@
 <package>
   <name>interaction_cursor_msgs</name>
   <version>0.0.1</version>
-  <description>The interaction_cursor_msgs package</description>
+  <description>
+    A message API for implementing a 6-DOF interaction cursor.
+    A minimal implementation has one node that handles the user device I/O and
+    another node (e.g. a plugin in Rviz) that uses the messages to interact with
+    a marker.
+  </description>
 
   <author email="adamleeper@gmail.com">Adam Leeper</author>
   <maintainer email="adamleeper@gmail.com">Adam Leeper</maintainer>
@@ -12,9 +17,10 @@
   <url type="website">http://www.ros.org/wiki/interaction_cursor_msgs</url>
   <url type="repository">https://github.com/aleeper/ros_3d_interaction_cursor</url>
   <url type="bugtracker">https://github.com/aleeper/ros_3d_interaction_cursor/issues</url>
-  
+
   <buildtool_depend>catkin</buildtool_depend>
-  
+
+  <build_depend>genmsg</build_depend>
   <build_depend>message_generation</build_depend>
   <build_depend>geometry_msgs</build_depend>
   <build_depend>visualization_msgs</build_depend>

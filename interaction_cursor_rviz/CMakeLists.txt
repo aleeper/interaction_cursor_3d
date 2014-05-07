@@ -1,10 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(interaction_cursor_rviz)
 
-if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -17,7 +13,6 @@ find_package(PkgConfig REQUIRED)
 
 # Ogre
 pkg_check_modules(OGRE OGRE)
-link_directories( ${OGRE_LIBRARY_DIRS} )
 
 # Qt Stuff
 find_package(Qt4 REQUIRED)
@@ -47,15 +42,12 @@ catkin_package(
 ###########
 
 ## Specify additional locations of header files
-include_directories(include 
-                    ${catkin_INCLUDE_DIRS} 
+include_directories(include
+                    ${catkin_INCLUDE_DIRS}
                     ${Boost_INCLUDE_DIRS}
                     ${QT_INCLUDE_DIR}
                     ${OGRE_INCLUDE_DIRS}
                     )
-
-link_directories(${Boost_LIBRARY_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
 
 # Header files that need Qt Moc pre-processing for use with Qt signals, etc:
 set( headers
@@ -66,7 +58,7 @@ set( headers
 qt4_wrap_cpp(MOC_SOURCES ${headers})
 
 # Plugin Source
-set(SOURCE_FILES 
+set(SOURCE_FILES
   src/interaction_cursor.cpp
 )
 
@@ -84,6 +76,6 @@ install(TARGETS interaction_cursor_rviz LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 install(FILES  interaction_cursor_rviz_plugin_description.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
-install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY include/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
 

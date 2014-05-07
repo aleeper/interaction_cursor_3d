@@ -14,15 +14,19 @@
   <url type="bugtracker">https://github.com/aleeper/ros_3d_interaction_cursor/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
-  
+
+  <build_depend>cmake_modules</build_depend>
   <build_depend>geometry_msgs</build_depend>
+  <build_depend>eigen</build_depend>
   <build_depend>interaction_cursor_msgs</build_depend>
   <build_depend>razer_hydra</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>std_msgs</build_depend>
   <build_depend>tf</build_depend>
-  
+
+  <run_depend>cmake_modules</run_depend>
   <run_depend>geometry_msgs</run_depend>
+  <run_depend>eigen</run_depend>
   <run_depend>interaction_cursor_msgs</run_depend>
   <run_depend>razer_hydra</run_depend>
   <run_depend>roscpp</run_depend>
@@ -30,7 +34,7 @@
   <run_depend>tf</run_depend>
 
   <export>
-  
+
   </export>
 
 </package>
