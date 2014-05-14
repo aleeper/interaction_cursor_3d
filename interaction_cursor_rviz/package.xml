@@ -13,8 +13,8 @@
   <license>BSD</license>
 
   <url type="website">http://www.ros.org/wiki/interaction_cursor_rviz</url>
-  <url type="repository">https://github.com/aleeper/ros_3d_interaction_cursor</url>
-  <url type="bugtracker">https://github.com/aleeper/ros_3d_interaction_cursor/issues</url>
+  <url type="repository">https://github.com/aleeper/interaction_cursor_3d</url>
+  <url type="bugtracker">https://github.com/aleeper/interaction_cursor_3d/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
 
@@ -27,9 +27,7 @@
   <run_depend>rviz</run_depend>
 
   <export>
-
     <rviz plugin="${prefix}/interaction_cursor_rviz_plugin_description.xml"/>
-
   </export>
 
 </package>
