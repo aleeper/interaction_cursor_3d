@@ -2,8 +2,8 @@
 Changelog for package interaction_cursor_3d
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2014-05-13)
+------------------
 * add metapackage
 * Contributors: Adam Leeper
 

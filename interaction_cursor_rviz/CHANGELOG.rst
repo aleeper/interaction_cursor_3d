@@ -2,8 +2,8 @@
 Changelog for package interaction_cursor_rviz
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.2 (2014-05-13)
+------------------
 * add metapackage
 * apply catkin_lint
 * Choose the 'best' control when grabbing an object.
