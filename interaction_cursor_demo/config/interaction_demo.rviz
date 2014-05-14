@@ -48,6 +48,7 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/InteractiveMarkers
+      Enable Transparency: true
       Enabled: true
       Name: InteractiveMarkers
       Show Axes: false
@@ -82,7 +83,8 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: /base_link
+    Fixed Frame: base_link
+    Frame Rate: 30
   Name: root
   Tools:
     - Class: rviz/Interact
@@ -101,76 +103,48 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_animated_view_controller/Animated
-      Control Mode: Orbit
-      Distance: 7.68197
-      Eye:
-        X: -7.66327
-        Y: -0.0900807
-        Z: 0.520522
-      Focus:
-        X: 0.000672817
-        Y: -0.000529945
-        Z: 0.00219017
-      Maintain Vertical Axis: true
-      Mouse Enabled: false
+      Class: rviz_fixed_view_controller/Fixed
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.06
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
       Name: Current View
       Near Clip Distance: 0.01
-      Placement Topic: /rviz/camera_placement
-      Target Frame: /user1_frame
-      Transition Time: 0.5
-      Up:
-        X: 0
-        Y: 0
-        Z: 1
-      Value: Animated (rviz_animated_view_controller)
+      Target Frame: user1_camera
+      Value: Fixed (rviz_fixed_view_controller)
+      Vertical Field Of View: 50
+      View Mode: X-forward, Z-up
     Saved:
-      - Class: rviz_animated_view_controller/Animated
-        Control Mode: Orbit
-        Distance: 7.68197
-        Eye:
-          X: -7.66327
-          Y: -0.0900807
-          Z: 0.520522
-        Focus:
-          X: 0.000672817
-          Y: -0.00052993
-          Z: 0.00219017
-        Maintain Vertical Axis: true
-        Mouse Enabled: false
+      - Class: rviz/Orbit
+        Distance: 10
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.06
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
+        Focal Point:
+          X: 0
+          Y: 0
+          Z: 0
+        Name: Orbit
+        Near Clip Distance: 0.01
+        Pitch: 0.785398
+        Target Frame: base_link
+        Value: Orbit (rviz)
+        Yaw: 0.785398
+      - Class: rviz_fixed_view_controller/Fixed
+        Enable Stereo Rendering:
+          Stereo Eye Separation: 0.06
+          Stereo Focal Distance: 1
+          Swap Stereo Eyes: false
+          Value: false
         Name: InteractionDemo
         Near Clip Distance: 0.01
-        Placement Topic: /rviz/camera_placement
-        Target Frame: /user1_frame
-        Transition Time: 0.5
-        Up:
-          X: 0
-          Y: 0
-          Z: 1
-        Value: Animated (rviz_animated_view_controller)
-      - Class: rviz_animated_view_controller/Animated
-        Control Mode: Orbit
-        Distance: 12.2458
-        Eye:
-          X: -10.5109
-          Y: -5.46845
-          Z: 4.06888
-        Focus:
-          X: -0.21824
-          Y: -0.558003
-          Z: -0.393047
-        Maintain Vertical Axis: true
-        Mouse Enabled: true
-        Name: RegularOrbit
-        Near Clip Distance: 0.01
-        Placement Topic: /rviz/camera_placement
-        Target Frame: /user1_frame
-        Transition Time: 0.5
-        Up:
-          X: 0
-          Y: 0
-          Z: 1
-        Value: Animated (rviz_animated_view_controller)
+        Target Frame: user1_camera
+        Value: Fixed (rviz_fixed_view_controller)
+        Vertical Field Of View: 50
+        View Mode: X-forward, Z-up
 Window Geometry:
   Displays:
     collapsed: false
@@ -187,5 +161,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1443
-  X: 0
-  Y: 24
+  X: 462
+  Y: 138

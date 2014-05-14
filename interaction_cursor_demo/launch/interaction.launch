@@ -8,7 +8,10 @@
   <include if="$(arg start_hydra)" file="$(find razer_hydra)/launch/hydra.launch" >
   </include>
 
-  <node name="interaction_cursor_demo_node" pkg="interaction_cursor_demo" type="interaction_cursor_demo_node" output="screen" >
+  <node name="interaction_cursor_demo_node"
+        pkg="interaction_cursor_demo"
+        type="interaction_cursor_demo_node"
+        output="screen" >
     <param name="period" type="double" value="$(arg period)" />
     <param name="device" type="string" value="$(arg device)" />
     <param name="hydra_workspace_radius" type="double" value="$(arg radius)" />
