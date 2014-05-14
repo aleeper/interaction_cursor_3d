@@ -63,6 +63,7 @@
 #include <QMenu>
 
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
 
 using namespace interaction_cursor_msgs;
 
@@ -579,7 +580,7 @@ void InteractionCursorDisplay::getActiveControl(InteractiveObjectWPtr& ptr, boos
     return;
   else
   {
-    ptr = *(highlighted_objects_.begin());
+    getBestControl(ptr);
     // Remove the object from the set so that we don't un-highlight it later on accident.
     //highlighted_objects_.erase(highlighted_objects_.begin());
   }
@@ -588,6 +589,25 @@ void InteractionCursorDisplay::getActiveControl(InteractiveObjectWPtr& ptr, boos
   if(!ptr.expired())
   {
     control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+  }
+}
+
+// Choose the 'best' ptr/control from the set of highlighted objects,
+// where 'best' = most degrees of freedom.
+void InteractionCursorDisplay::getBestControl(InteractiveObjectWPtr& ptr)
+{
+  ptr = *(highlighted_objects_.begin());
+  boost::shared_ptr<InteractiveMarkerControl> control;
+  control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(ptr.lock());
+
+  BOOST_FOREACH(InteractiveObjectWPtr candidate_ptr, highlighted_objects_) {
+    boost::shared_ptr<InteractiveMarkerControl> candidate_control;
+    candidate_control = boost::dynamic_pointer_cast<InteractiveMarkerControl>(candidate_ptr.lock());
+    if (candidate_control->getInteractionMode() >= control->getInteractionMode())
+    {
+      ptr = candidate_ptr;
+      control = candidate_control;
+    }
   }
 }
 
