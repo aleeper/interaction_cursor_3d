@@ -28,6 +28,7 @@
   <run_depend>eigen</run_depend>
   <run_depend>geometry_msgs</run_depend>
   <run_depend>interaction_cursor_msgs</run_depend>
+  <run_depend>interactive_marker_tutorials</run_depend>
   <run_depend>razer_hydra</run_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>rviz_fixed_view_controller</run_depend>
