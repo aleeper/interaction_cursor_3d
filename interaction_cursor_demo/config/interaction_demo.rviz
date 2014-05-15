@@ -113,7 +113,7 @@ Visualization Manager:
       Near Clip Distance: 0.01
       Target Frame: user1_camera
       Value: Fixed (rviz_fixed_view_controller)
-      Vertical Field Of View: 50
+      Vertical Field Of View: 60
       View Mode: X-forward, Z-up
     Saved:
       - Class: rviz/Orbit

@@ -1,9 +1,9 @@
 <launch>
 
   <arg name="start_hydra" default="true" />
-  <arg name="radius" default="4.0" />
+  <arg name="radius" default="3.0" />
 
-  <include file="$(find interaction_cursor_demo)/launch/user_test.launch" >
+  <include file="$(find interaction_cursor_demo)/launch/interaction.launch" >
     <arg name="radius" value="$(arg radius)" />
     <arg name="start_hydra" value="$(arg start_hydra)" />
   </include>
