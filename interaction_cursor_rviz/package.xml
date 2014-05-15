@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>interaction_cursor_rviz</name>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <description>
     An Rviz plugin that implements the interaction_cursor_msgs API
     to interact with interactive_markers.

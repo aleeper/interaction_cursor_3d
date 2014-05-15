@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>interaction_cursor_msgs</name>
-  <version>0.0.2</version>
+  <version>0.0.3</version>
   <description>
     A message API for implementing a 6-DOF interaction cursor.
     A minimal implementation has one node that handles the user device I/O and

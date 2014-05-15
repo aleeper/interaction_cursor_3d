@@ -2,8 +2,8 @@
 Changelog for package interaction_cursor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+0.0.3 (2014-05-14)
+------------------
 * fix and tweak demo launch
 * Contributors: Adam Leeper
 
