@@ -2,6 +2,11 @@
 Changelog for package interaction_cursor_demo
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+Forthcoming
+-----------
+* fix and tweak demo launch
+* Contributors: Adam Leeper
+
 0.0.2 (2014-05-13)
 ------------------
 * add missing run depend
